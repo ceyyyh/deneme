@@ -11,7 +11,7 @@ aynı siteye istekler sırayla ve araya bekleme konarak gönderilir.
 
 | Site | Nasıl alınıyor |
 |------|----------------|
-| kariyer.net | 39 ilçe sayfası + İstanbul geneli, yeni ilan çıkmayana kadar tüm sayfalar (site liste başına en fazla 100 sayfa gösteriyor, ilçe sayfaları bu sınırı aşmayı ve ilçe bilgisini sağlıyor) |
+| kariyer.net | İstanbul geneli (100 sayfa) + 39 ilçe sayfası. Site belli sayıda istekten sonra geçici olarak durdurduğu için her tur kaldığı yerden devam eder; tamamı ~2 günde bir dolaşılır. İlçe sayfaları ilanlara ilçe bilgisini de ekler |
 | eleman.net | İstanbul listesinin tüm sayfaları |
 | isbul.net | Sitenin yapay zeka ajanları için açtığı resmi API (`/api/agent/jobs`) |
 | SecretCV | İl, yaka ve 39 ilçe listesinin 1. sayfaları (robots.txt sayfalamayı yasaklıyor) |
@@ -36,7 +36,7 @@ is_bul/
   scrape.py          # tüm kaynakları tarar -> site/jobs.json
   requirements.txt
   site/              # yayınlanan statik site (index.html, app.js, style.css, jobs.json)
-.github/workflows/is-bul.yml   # 6 saatte bir tarar, jobs.json'u commit'ler, Pages'e yayınlar
+.github/workflows/is-bul.yml   # 3 saatte bir tarar, jobs.json'u commit'ler, Pages'e yayınlar
 ```
 
 ## Linkli ve otomatik güncellenen kurulum (bir kerelik)
@@ -47,7 +47,7 @@ is_bul/
      repoyu public yap ya da GitHub Pro kullan.
 3. **Actions → "İşBul İstanbul - ilan güncelle" → Run workflow** ile ilk taramayı başlat.
 4. Site şu adreste açılır: `https://<kullanici-adi>.github.io/<repo-adi>/`
-   (bu repo için `https://ceyyyh.github.io/deneme/`). Sonrasında her 6 saatte bir kendiliğinden güncellenir.
+   (bu repo için `https://ceyyyh.github.io/deneme/`). Sonrasında her 3 saatte bir kendiliğinden güncellenir.
 
 ## Kendi bilgisayarında çalıştırma
 

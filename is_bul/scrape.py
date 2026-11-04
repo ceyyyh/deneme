@@ -38,6 +38,7 @@ NOW = dt.datetime.now(TZ)
 TODAY = NOW.date()
 KEEP_DAYS = 14          # kaynağı hata verdiyse ilanlar en fazla bu kadar gün tutulur
 GONE_DAYS = 2           # kaynağı sorunsuz tarandığı halde bu kadar gündür görünmeyen ilan kapanmış sayılır
+PARTIAL_KEEP_DAYS = 5   # kaynak parça parça taranıyorsa (kariyer.net) görülmeyen ilan bu kadar gün tutulur
 DELAY = 1.0             # aynı siteye art arda istekler arası bekleme (sn)
 HOST_DELAY = {"www.kariyer.net": 4.0}   # hız sınırı koyan sitelere daha seyrek istek
 BACKOFF = 90            # 403/429 gelince bu kadar bekleyip bir kez daha denenir
@@ -168,48 +169,45 @@ def _kariyer_cards(html: str) -> list[dict]:
     return out
 
 
-def _kariyer_crawl(slug: str, found: dict, max_pages: int, district=None, side=None, stop_when_known=True) -> int:
-    """Bir listeyi, yeni ilan çıkmayana kadar (en fazla max_pages) sayfa sayfa gezer."""
-    added = 0
-    for p in range(1, max_pages + 1):
-        html = get(f"https://www.kariyer.net/is-ilanlari/{slug}" + ("" if p == 1 else f"-{p}"))
-        if not html:
-            break
-        cards = _kariyer_cards(html)
+KARIYER_LISTS = [("istanbul", None, None)] + [
+    (f"istanbul+{'asya' if side == 'Anadolu' else 'avrupa'}-{slug}", name, side) for name, side, slug in DISTRICTS
+]
+
+
+def scrape_kariyer(max_pages: int, with_districts: bool, cursor: dict) -> list[dict]:
+    """kariyer.net belli sayıda istekten sonra geçici olarak durduruyor (403). Bu yüzden
+    tarama kaldığı yeri `cursor`a yazar; sonraki tur oradan devam eder ve liste sona
+    ulaşınca başa döner. Sıra: İstanbul geneli (sayfa başı ~50 yeni ilan), sonra 39 ilçe
+    (100 sayfa sınırının ötesindeki ilanlar + ilçe bilgisi)."""
+    lists = KARIYER_LISTS if with_districts else KARIYER_LISTS[:1]
+    li = cursor.get("list", 0) if cursor.get("list", 0) < len(lists) else 0
+    page = max(1, cursor.get("page", 1))
+    start = (li, page)
+    found: dict[str, dict] = {}
+    wrapped = False
+    while True:
+        slug, district, side = lists[li]
+        html = get(f"https://www.kariyer.net/is-ilanlari/{slug}" + ("" if page == 1 else f"-{page}"))
+        if html is None and "www.kariyer.net" in BLOCKED:
+            break  # bir sonraki tur aynı sayfadan devam eder
+        cards = _kariyer_cards(html) if html else []
         organic = [c for c in cards if not c["_sponsor"]]
-        if not organic:
-            break
-        new_here = 0
         for c in cards:
-            prev = found.get(c["url"])
-            if prev is None:
-                found[c["url"]] = c
-                prev = c
-                if not c["_sponsor"]:
-                    new_here += 1
+            prev = found.setdefault(c["url"], c)
             if district and not prev.get("district"):
                 prev["district"], prev["side"] = district, side
-        added += new_here
-        if new_here == 0 and stop_when_known:
+        if page == 1 or page % 10 == 0 or len(organic) < 40:
+            log(f"  kariyer.net {district or 'İstanbul geneli'} s.{page}: toplam {len(found)}")
+        if len(organic) < 40 or page >= max_pages:  # liste bitti -> sıradaki liste
+            li, page = li + 1, 1
+            if li >= len(lists):
+                li, wrapped = 0, True
+        else:
+            page += 1
+        if wrapped and (li, page) >= start:  # tam bir tur tamamlandı
             break
-        if len(organic) < 40:  # son sayfa
-            break
-    return added
-
-
-def scrape_kariyer(max_pages: int, with_districts: bool) -> list[dict]:
-    found: dict[str, dict] = {}
-    # önce en verimli liste (İstanbul geneli, sayfa başı ~50 yeni ilan), sonra ilçeler:
-    # ilçeler 100 sayfa sınırının ötesindeki ilanları ve ilanların ilçe bilgisini getirir
-    n = _kariyer_crawl("istanbul", found, max_pages)
-    log(f"  kariyer.net İstanbul geneli: +{n}  (toplam {len(found)})")
-    if with_districts:
-        for name, side, slug in DISTRICTS:
-            if "www.kariyer.net" in BLOCKED:
-                break
-            n = _kariyer_crawl(f"istanbul+{'asya' if side == 'Anadolu' else 'avrupa'}-{slug}", found, max_pages, name, side,
-                               stop_when_known=False)
-            log(f"  kariyer.net {name}: +{n}  (toplam {len(found)})")
+    cursor.clear()
+    cursor.update({"list": li, "page": page, "at": lists[li][1] or "İstanbul geneli"})
     for j in found.values():
         j.pop("_sponsor", None)
     return list(found.values())
@@ -445,7 +443,7 @@ CATEGORIES = [
     ("Satış & Pazarlama", r"satış|sales|business development|iş geliştirme|marka uzman|brand|buyer|alıcı|pazarlama|marketing|temsilci|danışman(?!lık)|plasiyer|key account|bayi|e-?ticaret|dijital|sosyal medya|seo\b|reklam"),
     ("Mağaza & Perakende", r"mağaza|kasiyer|reyon|perakende|retail|tezgahtar|market"),
     ("Muhasebe & Finans", r"muhasebe|finans|portföy|vezne|collection|operations manager|finance|mali |accountant|accounting|bütçe|denetim|audit|vergi|tahsilat|bankacı|kredi|sigorta|treasury|ön muhasebe"),
-    ("Lojistik & Şoför", r"lojistik|depo|sevkiyat|şoför|sürücü|kurye|forklift|dağıtım|nakliye|ithalat|ihracat|dış ticaret|gümrük|tır|kamyon|planlama|satın ?alma|tedarik|warehouse|logistics"),
+    ("Lojistik & Şoför", r"lojistik|depo|sevkiyat|teslimat|filo|araç|moto kurye|şoför|sürücü|kurye|forklift|dağıtım|nakliye|ithalat|ihracat|dış ticaret|gümrük|tır|kamyon|planlama|satın ?alma|tedarik|warehouse|logistics"),
     ("Üretim & Teknik", r"üretim|operatör|modelist|teknolog|vasıfsız|terzi|dikiş|konfeksiyon|montaj|kaynak|cnc|torna|teknisyen|tekniker|elektrik|mekanik|bakım|usta|kalfa|çırak|işçi|imalat|boyacı|tesisat|kalıp|paketleme|kalite"),
     ("Mühendislik & İnşaat", r"mühendis|engineer|mimar|inşaat|şantiye|proje (yönetici|müdür)|iş güvenliği|isg|harita|tekniker"),
     ("Yeme-İçme & Turizm", r"garson|aşçı|ekip üyesi|ikram|çay|kahve|f&b|yiyecek|aşcı|komi|barista|mutfak|şef|bulaşık|restoran|kafe|cafe|otel|resepsiyon|kat hizmet|pastane|fırın|turizm|servis personeli|bar\b"),
@@ -516,8 +514,15 @@ def main() -> int:
     args = ap.parse_args()
 
     q = args.quick
+    old_data = {}
+    if args.out.exists():
+        try:
+            old_data = json.loads(args.out.read_text("utf-8"))
+        except ValueError:
+            old_data = {}
+    cursor = dict((old_data.get("cursor") or {}).get("kariyer.net") or {})
     sources = {
-        "kariyer.net": lambda: scrape_kariyer(1 if q else 100, not q),
+        "kariyer.net": lambda: scrape_kariyer(1 if q else 100, not q, cursor),
         "eleman.net": lambda: scrape_eleman(1 if q else 300),
         "secretcv": lambda: scrape_secretcv(not q),
         "isbul.net": lambda: scrape_isbul(1 if q else 100),
@@ -526,12 +531,7 @@ def main() -> int:
         "linkedin": lambda: scrape_jobspy("linkedin", 20 if q else 150),
     }
 
-    old = {}
-    if args.out.exists():
-        try:
-            old = {j["id"]: j for j in json.loads(args.out.read_text("utf-8")).get("jobs", [])}
-        except (ValueError, KeyError):
-            old = {}
+    old = {j["id"]: j for j in old_data.get("jobs", []) if "id" in j}
 
     def run(name):
         t0 = time.time()
@@ -565,14 +565,17 @@ def main() -> int:
         j["posted"] = j.get("posted") or (prev or {}).get("posted") or j["first_seen"][:10]
         merged[j["id"]] = enrich(j)
 
+    status["kariyer.net"]["partial"] = True  # her tur listenin bir parçası okunur
     keep_cut = (NOW - dt.timedelta(days=KEEP_DAYS)).isoformat()
+    partial_cut = (NOW - dt.timedelta(days=PARTIAL_KEEP_DAYS)).isoformat()
     gone_cut = (NOW - dt.timedelta(days=GONE_DAYS)).isoformat()
     for jid, j in old.items():  # bu turda görünmeyen eski ilanlar
         if jid in merged:
             continue
         st = status.get(j.get("source"), {})
         src_ok = st.get("ok") and not st.get("partial")
-        if j.get("last_seen", "") >= (gone_cut if src_ok else keep_cut):
+        cut = gone_cut if src_ok else partial_cut if st.get("partial") and st.get("ok") else keep_cut
+        if j.get("last_seen", "") >= cut:
             merged[jid] = j
 
     # aynı ilan farklı sitelerde -> tek kart, diğer kaynaklar "also" olarak eklenir
@@ -594,7 +597,8 @@ def main() -> int:
             by_key.setdefault(k2, j)
     jobs = sorted(by_key.values(), key=lambda x: (x.get("posted") or "", x["first_seen"]), reverse=True)
 
-    data = {"updated": now_iso, "city": "İstanbul", "sources": status, "count": len(jobs), "jobs": jobs}
+    data = {"updated": now_iso, "city": "İstanbul", "sources": status, "cursor": {"kariyer.net": cursor},
+            "count": len(jobs), "jobs": jobs}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), "utf-8")
     log(f"= {len(jobs)} ilan -> {args.out}  {json.dumps(status, ensure_ascii=False)}")

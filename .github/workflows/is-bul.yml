@@ -4,7 +4,7 @@ name: İşBul İstanbul - ilan güncelle
 
 on:
   schedule:
-    - cron: "23 */6 * * *"   # 6 saatte bir (UTC); tam tarama ~10-15 dk sürer
+    - cron: "23 */3 * * *"   # 3 saatte bir (UTC); bir tur ~5-10 dk sürer
   workflow_dispatch:          # Actions sekmesinden elle de çalıştırılabilir
   push:
     paths:
