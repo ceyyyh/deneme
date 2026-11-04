@@ -13,8 +13,8 @@
   };
 
   const SOURCES = {
-    "kariyer.net": "kariyer.net", "eleman.net": "eleman.net", linkedin: "LinkedIn",
-    indeed: "Indeed", secretcv: "SecretCV",
+    "kariyer.net": "kariyer.net", "eleman.net": "eleman.net", "isbul.net": "isbul.net",
+    secretcv: "SecretCV", elemanonline: "Eleman Online", indeed: "Indeed", linkedin: "LinkedIn",
   };
   const PALETTE = ["#5b3df5", "#0a66c2", "#e8590c", "#0f9d58", "#c2255c", "#1098ad", "#7048e8", "#d9480f", "#2b8a3e", "#364fc7"];
 

@@ -22,7 +22,9 @@ import hashlib
 import json
 import re
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 import unicodedata
 from pathlib import Path
 
@@ -33,11 +35,19 @@ UA = "IstanbulIsBul/1.0 (kisisel is ilani toplayici; +https://github.com/ceyyyh/
 TZ = dt.timezone(dt.timedelta(hours=3))  # Türkiye saati
 NOW = dt.datetime.now(TZ)
 TODAY = NOW.date()
-KEEP_DAYS = 14          # bu kadar gündür görülmeyen ilanlar silinir
-DELAY = 1.5             # istekler arası bekleme (sn)
+KEEP_DAYS = 14          # kaynağı hata verdiyse ilanlar en fazla bu kadar gün tutulur
+GONE_DAYS = 2           # kaynağı sorunsuz tarandığı halde bu kadar gündür görünmeyen ilan kapanmış sayılır
+DELAY = 1.0             # aynı siteye art arda istekler arası bekleme (sn)
 
-SESSION = requests.Session()
-SESSION.headers.update({"User-Agent": UA, "Accept-Language": "tr-TR,tr;q=0.9"})
+_local = threading.local()
+
+
+def session() -> requests.Session:
+    # her kaynak kendi iş parçacığında, kendi oturumuyla sırayla istek atar
+    if not hasattr(_local, "s"):
+        _local.s = requests.Session()
+        _local.s.headers.update({"User-Agent": UA, "Accept-Language": "tr-TR,tr;q=0.9"})
+    return _local.s
 
 
 def log(*a):
@@ -46,7 +56,7 @@ def log(*a):
 
 def get(url: str) -> str | None:
     try:
-        r = SESSION.get(url, timeout=25)
+        r = session().get(url, timeout=30)
         if r.status_code != 200:
             log(f"  ! {r.status_code} {url}")
             return None
@@ -91,48 +101,101 @@ def relative_date(text: str) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------- ilçeler
+# (görünen ad, yaka, ascii slug) - kariyer.net ve secretcv ilçe sayfaları için
+DISTRICTS = [
+    ("Adalar", "Anadolu", "adalar"), ("Ataşehir", "Anadolu", "atasehir"), ("Beykoz", "Anadolu", "beykoz"),
+    ("Çekmeköy", "Anadolu", "cekmekoy"), ("Kadıköy", "Anadolu", "kadikoy"), ("Kartal", "Anadolu", "kartal"),
+    ("Maltepe", "Anadolu", "maltepe"), ("Pendik", "Anadolu", "pendik"), ("Sancaktepe", "Anadolu", "sancaktepe"),
+    ("Sultanbeyli", "Anadolu", "sultanbeyli"), ("Şile", "Anadolu", "sile"), ("Tuzla", "Anadolu", "tuzla"),
+    ("Ümraniye", "Anadolu", "umraniye"), ("Üsküdar", "Anadolu", "uskudar"),
+    ("Arnavutköy", "Avrupa", "arnavutkoy"), ("Avcılar", "Avrupa", "avcilar"), ("Bağcılar", "Avrupa", "bagcilar"),
+    ("Bahçelievler", "Avrupa", "bahcelievler"), ("Bakırköy", "Avrupa", "bakirkoy"),
+    ("Başakşehir", "Avrupa", "basaksehir"), ("Bayrampaşa", "Avrupa", "bayrampasa"),
+    ("Beşiktaş", "Avrupa", "besiktas"), ("Beylikdüzü", "Avrupa", "beylikduzu"), ("Beyoğlu", "Avrupa", "beyoglu"),
+    ("Büyükçekmece", "Avrupa", "buyukcekmece"), ("Çatalca", "Avrupa", "catalca"), ("Esenler", "Avrupa", "esenler"),
+    ("Esenyurt", "Avrupa", "esenyurt"), ("Eyüp", "Avrupa", "eyup"), ("Fatih", "Avrupa", "fatih"),
+    ("Gaziosmanpaşa", "Avrupa", "gaziosmanpasa"), ("Güngören", "Avrupa", "gungoren"),
+    ("Kağıthane", "Avrupa", "kagithane"), ("Küçükçekmece", "Avrupa", "kucukcekmece"),
+    ("Sarıyer", "Avrupa", "sariyer"), ("Silivri", "Avrupa", "silivri"), ("Sultangazi", "Avrupa", "sultangazi"),
+    ("Şişli", "Avrupa", "sisli"), ("Zeytinburnu", "Avrupa", "zeytinburnu"),
+]
+
+
 # ---------------------------------------------------------------- kariyer.net
-def scrape_kariyer(pages: int) -> list[dict]:
+def _kariyer_cards(html: str) -> list[dict]:
+    soup = BeautifulSoup(html, "html.parser")
     out = []
-    for p in range(1, pages + 1):
-        url = "https://www.kariyer.net/is-ilanlari/istanbul" + ("" if p == 1 else f"-{p}")
-        html = get(url)
-        if not html:
-            break
-        soup = BeautifulSoup(html, "html.parser")
-        cards = soup.select('div[data-test="ad-card"]')
-        if not cards:
-            break
-        for c in cards:
-            a = c.select_one('a[data-test="ad-card-item"]')
-            title = c.select_one('[data-test="ad-card-title"]')
-            if not a or not title:
-                continue
-            comp = c.select_one('[data-test="subtitle"]')
-            loc = c.select_one('[data-test="location"]')
-            model = c.select_one('[data-test="work-model"]')
-            logo = c.select_one('img[data-test="company-image"]')
-            out.append({
-                "source": "kariyer.net",
-                "title": clean(title.get_text()),
-                "company": clean(comp.get_text() if comp else ""),
-                "location": clean(loc.get_text() if loc else c.get("cityname", "İstanbul")),
-                "work_model": clean(model.get_text() if model else c.get("workmodeltext", "")),
-                "job_type": clean(c.get("worktypetext", "")),
-                "sector": clean(c.get("sectorname", "")),
-                "posted": relative_date(c.get("time", "")),
-                "url": "https://www.kariyer.net" + a["href"].split("?")[0],
-                "logo": logo["src"] if logo and logo.get("src", "").startswith("http") else "",
-                "snippet": "",
-            })
-        log(f"  kariyer.net sayfa {p}: {len(cards)}")
+    for c in soup.select('div[data-test="ad-card"]'):
+        a = c.select_one('a[data-test="ad-card-item"]')
+        title = c.select_one('[data-test="ad-card-title"]')
+        if not a or not title:
+            continue
+        comp = c.select_one('[data-test="subtitle"]')
+        loc = c.select_one('[data-test="location"]')
+        model = c.select_one('[data-test="work-model"]')
+        logo = c.select_one('img[data-test="company-image"]')
+        out.append({
+            "source": "kariyer.net",
+            "title": clean(title.get_text()),
+            "company": clean(comp.get_text() if comp else ""),
+            "location": clean(loc.get_text() if loc else c.get("cityname", "İstanbul")),
+            "work_model": clean(model.get_text() if model else c.get("workmodeltext", "")),
+            "job_type": clean(c.get("worktypetext", "")),
+            "sector": clean(c.get("sectorname", "")),
+            "posted": relative_date(c.get("time", "")),
+            "url": "https://www.kariyer.net" + a["href"].split("?")[0],
+            "logo": logo["src"] if logo and logo.get("src", "").startswith("http") else "",
+            "snippet": "",
+            "_sponsor": c.get("sponsor") == "true",
+        })
     return out
 
 
+def _kariyer_crawl(slug: str, found: dict, max_pages: int, district=None, side=None) -> int:
+    """Bir listeyi, yeni ilan çıkmayana kadar (en fazla max_pages) sayfa sayfa gezer."""
+    added = 0
+    for p in range(1, max_pages + 1):
+        html = get(f"https://www.kariyer.net/is-ilanlari/{slug}" + ("" if p == 1 else f"-{p}"))
+        if not html:
+            break
+        cards = _kariyer_cards(html)
+        organic = [c for c in cards if not c["_sponsor"]]
+        if not organic:
+            break
+        new_here = 0
+        for c in cards:
+            prev = found.get(c["url"])
+            if prev is None:
+                found[c["url"]] = c
+                prev = c
+                if not c["_sponsor"]:
+                    new_here += 1
+            if district and not prev.get("district"):
+                prev["district"], prev["side"] = district, side
+        added += new_here
+        if new_here == 0:
+            break
+    return added
+
+
+def scrape_kariyer(max_pages: int, with_districts: bool) -> list[dict]:
+    found: dict[str, dict] = {}
+    if with_districts:  # önce ilçeler: ilana ilçe bilgisi de eklenir
+        for name, side, slug in DISTRICTS:
+            n = _kariyer_crawl(f"istanbul+{'asya' if side == 'Anadolu' else 'avrupa'}-{slug}", found, max_pages, name, side)
+            log(f"  kariyer.net {name}: +{n}  (toplam {len(found)})")
+    n = _kariyer_crawl("istanbul", found, max_pages)
+    log(f"  kariyer.net İstanbul geneli: +{n}  (toplam {len(found)})")
+    for j in found.values():
+        j.pop("_sponsor", None)
+    return list(found.values())
+
+
 # ---------------------------------------------------------------- eleman.net
-def scrape_eleman(pages: int) -> list[dict]:
-    out = []
-    for p in range(1, pages + 1):
+def scrape_eleman(max_pages: int) -> list[dict]:
+    found: dict[str, dict] = {}
+    for p in range(1, max_pages + 1):
         url = "https://www.eleman.net/is-ilanlari/istanbul" + ("" if p == 1 else f"?sy={p}")
         html = get(url)
         if not html:
@@ -141,6 +204,7 @@ def scrape_eleman(pages: int) -> list[dict]:
         cards = soup.select("div.ilan_listeleme_bol")
         if not cards:
             break
+        before = len(found)
         for c in cards:
             a = c.select_one('a[href*="/is-ilani/"]')
             h = c.select_one("h3")
@@ -154,15 +218,15 @@ def scrape_eleman(pages: int) -> list[dict]:
                     company = parts[0]
                 if len(parts) > 1:
                     location = parts[-1]
-            texts = c.select(".c-showcase-box__text")
             perks, snippet = "", ""
-            for t in texts:
+            for t in c.select(".c-showcase-box__text"):
                 if t.select_one(".hgi-eraser-add"):
                     perks = clean(t.get_text())
                 else:
                     snippet = clean(t.get_text())
             logo = c.select_one("img.c-brand-logo__img")
-            out.append({
+            u = a["href"].split("?")[0]
+            found.setdefault(u, {
                 "source": "eleman.net",
                 "title": clean(h.get_text()),
                 "company": company,
@@ -172,31 +236,38 @@ def scrape_eleman(pages: int) -> list[dict]:
                 "sector": "",
                 "perks": perks,
                 "posted": None,
-                "url": a["href"].split("?")[0],
+                "url": u,
                 "logo": logo["src"] if logo and logo.get("src", "").startswith("http") else "",
-                "snippet": snippet[:220],
+                "snippet": snippet[:200],
             })
-        log(f"  eleman.net sayfa {p}: {len(cards)}")
-    return out
+        if p % 10 == 0 or len(found) == before:
+            log(f"  eleman.net sayfa {p}: toplam {len(found)}")
+        if len(found) == before:
+            break
+    return list(found.values())
 
 
 # ---------------------------------------------------------------- secretcv
-def scrape_secretcv() -> list[dict]:
-    # robots.txt '?sf=' sayfalamasını yasaklıyor -> sadece ilk sayfa
-    html = get("https://www.secretcv.com/is-ilanlari/istanbul-is-ilanlari")
+def _secretcv_page(url: str, found: dict, district=None, side=None) -> int:
+    html = get(url)
     if not html:
-        return []
+        return 0
     soup = BeautifulSoup(html, "html.parser")
-    out = []
+    n = 0
     for c in soup.select("div.cv-job-box"):
         a = c.select_one("a.title")
         if not a or not a.get("href", "").startswith("https://www.secretcv.com/"):
+            continue
+        u = a["href"].split("?")[0]
+        if u in found:
+            if district and not found[u].get("district"):
+                found[u]["district"], found[u]["side"] = district, side
             continue
         comp = c.select_one("a.company")
         city = c.select_one(".city span")
         date = c.select_one(".city small")
         logo = c.select_one("img.img-brand")
-        out.append({
+        found[u] = {
             "source": "secretcv",
             "title": clean(a.get("title") or a.get_text()),
             "company": clean(comp.get("title") if comp else ""),
@@ -205,11 +276,99 @@ def scrape_secretcv() -> list[dict]:
             "job_type": "",
             "sector": "",
             "posted": relative_date(date.get_text().replace("İlan Tarihi:", "") if date else ""),
-            "url": a["href"].split("?")[0],
+            "url": u,
             "logo": logo["src"] if logo and logo.get("src", "").startswith("http") else "",
             "snippet": "",
-        })
-    log(f"  secretcv: {len(out)}")
+        }
+        if district:
+            found[u]["district"], found[u]["side"] = district, side
+        n += 1
+    return n
+
+
+def scrape_secretcv(with_districts: bool) -> list[dict]:
+    # robots.txt '?sf=' sayfalamasını yasaklıyor -> her listenin yalnızca 1. sayfası okunur,
+    # bu yüzden il, yaka ve ilçe listelerinin hepsi ayrı ayrı gezilir.
+    found: dict[str, dict] = {}
+    base = "https://www.secretcv.com/is-ilanlari/"
+    if with_districts:
+        for name, side, slug in DISTRICTS:
+            _secretcv_page(f"{base}istanbul-{side.lower()}/{slug}-is-ilanlari", found, name, side)
+    for u in ("istanbul-is-ilanlari", "istanbul-avrupa-is-ilanlari", "istanbul-anadolu-is-ilanlari"):
+        _secretcv_page(base + u, found)
+    log(f"  secretcv: {len(found)}")
+    return list(found.values())
+
+
+# ---------------------------------------------------------------- isbul.net (resmi ajan API'si)
+def scrape_isbul(max_pages: int) -> list[dict]:
+    # isbul.net /api/agent uç noktasını robots.txt'de ajanlara açıkça izin veriyor
+    out = []
+    for p in range(1, max_pages + 1):
+        txt = get(f"https://www.isbul.net/api/agent/jobs?city=istanbul&per_page=25&page={p}")
+        if not txt:
+            break
+        d = json.loads(txt)
+        jobs = d.get("data") or d.get("jobs") or []
+        for r in jobs:
+            city, dist = clean(r.get("city")), clean(r.get("district"))
+            out.append({
+                "source": "isbul.net",
+                "title": clean(r.get("title")),
+                "company": clean(r.get("company")),
+                "location": " - ".join(x for x in (city, dist) if x) or "İstanbul",
+                "work_model": clean(r.get("work_type")) if r.get("work_type") in ("Uzaktan", "Hibrit") else "",
+                "job_type": clean(r.get("work_type")) if r.get("work_type") not in ("Uzaktan", "Hibrit") else "",
+                "sector": clean(r.get("sector")),
+                "posted": clean(r.get("published_at"))[:10] or None,
+                "url": clean(r.get("url")),
+                "logo": "",
+                "snippet": clean(r.get("position")),
+            })
+        meta = d.get("meta") or {}
+        if not jobs or p >= (meta.get("last_page") or p):
+            break
+    log(f"  isbul.net: {len(out)}")
+    return [j for j in out if j["title"] and j["url"].startswith("https://www.isbul.net/")]
+
+
+# ---------------------------------------------------------------- elemanonline
+def scrape_elemanonline(max_pages: int) -> list[dict]:
+    out, seen = [], set()
+    for p in range(1, max_pages + 1):
+        html = get("https://www.elemanonline.com.tr/is-ilanlari/istanbul" + ("" if p == 1 else f"?page={p}"))
+        if not html:
+            break
+        m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.S)
+        if not m:
+            break
+        jobs = (json.loads(m.group(1))["props"]["pageProps"].get("jobs") or {})
+        items = (jobs.get("jobsShowcase") or []) + (jobs.get("jobs") or [])
+        new = 0
+        for r in items:
+            if r.get("_id") in seen or not r.get("slug"):
+                continue
+            seen.add(r["_id"])
+            new += 1
+            loc = (r.get("location") or [{}])[0]
+            comp = r.get("company") or {}
+            logo = comp.get("profileUrl") or ""
+            out.append({
+                "source": "elemanonline",
+                "title": clean(r.get("position")),
+                "company": clean(comp.get("title")),
+                "location": " - ".join(x for x in (clean(loc.get("provinceText")), clean(loc.get("townText"))) if x) or "İstanbul",
+                "work_model": "",
+                "job_type": clean(r.get("workingTypeText")),
+                "sector": "",
+                "posted": clean(r.get("publishDate"))[:10] or None,
+                "url": "https://www.elemanonline.com.tr" + r["slug"],
+                "logo": logo if logo.startswith("http") else "",
+                "snippet": "",
+            })
+        if not new or p >= (jobs.get("totalPages") or p):
+            break
+    log(f"  elemanonline: {len(out)}")
     return out
 
 
@@ -221,7 +380,7 @@ def scrape_jobspy(site: str, wanted: int) -> list[dict]:
         site_name=[site],
         location="Istanbul, Turkey",
         results_wanted=wanted,
-        hours_old=168,
+        hours_old=24 * KEEP_DAYS,
         country_indeed="turkey",
         linkedin_fetch_description=False,
         verbose=0,
@@ -251,7 +410,7 @@ def scrape_jobspy(site: str, wanted: int) -> list[dict]:
             "posted": posted,
             "url": url,
             "logo": clean(r.get("company_logo")) if clean(r.get("company_logo")).startswith("http") else "",
-            "snippet": desc[:220],
+            "snippet": desc[:200],
         })
     log(f"  {site}: {len(out)}")
     return out
@@ -295,9 +454,12 @@ def enrich(j: dict) -> dict:
     j["category"] = (next((n for n, rx in CAT_RE if rx.search(title)), None)
                      or next((n for n, rx in CAT_RE if sector and rx.search(sector)), "Diğer"))
     loc = tr_lower(j.get("location", ""))
-    j["side"] = ("Avrupa" if any(x in loc for x in AVRUPA)
-                 else "Anadolu" if any(x in loc for x in ANADOLU) else "")
-    j["district"] = next((x.title() for x in ILCELER if x in loc), "")
+    if not j.get("district"):
+        j["district"] = next((d for d, side, _ in DISTRICTS if tr_lower(d) in loc), "")
+    if not j.get("side"):
+        j["side"] = (next((side for d, side, _ in DISTRICTS if d == j["district"]), "") if j["district"]
+                     else "Avrupa" if any(x in loc for x in AVRUPA)
+                     else "Anadolu" if any(x in loc for x in ANADOLU) else "")
     text = tr_lower(f"{j['title']} {j.get('work_model', '')} {j.get('job_type', '')} {loc}")
     if not j.get("work_model"):
         if re.search(r"uzaktan|remote|evden", text):
@@ -330,13 +492,15 @@ def main() -> int:
     ap.add_argument("--quick", action="store_true", help="az sayfa (test için)")
     args = ap.parse_args()
 
-    pages = 1 if args.quick else 6
+    q = args.quick
     sources = {
-        "kariyer.net": lambda: scrape_kariyer(pages),
-        "eleman.net": lambda: scrape_eleman(pages),
-        "secretcv": scrape_secretcv,
-        "indeed": lambda: scrape_jobspy("indeed", 30 if args.quick else 200),
-        "linkedin": lambda: scrape_jobspy("linkedin", 20 if args.quick else 100),
+        "kariyer.net": lambda: scrape_kariyer(1 if q else 100, not q),
+        "eleman.net": lambda: scrape_eleman(1 if q else 300),
+        "secretcv": lambda: scrape_secretcv(not q),
+        "isbul.net": lambda: scrape_isbul(1 if q else 100),
+        "elemanonline": lambda: scrape_elemanonline(1 if q else 100),
+        "indeed": lambda: scrape_jobspy("indeed", 30 if q else 1000),
+        "linkedin": lambda: scrape_jobspy("linkedin", 20 if q else 150),
     }
 
     old = {}
@@ -346,16 +510,22 @@ def main() -> int:
         except (ValueError, KeyError):
             old = {}
 
-    status, fresh = {}, []
-    for name, fn in sources.items():
-        log(f"> {name}")
+    def run(name):
+        t0 = time.time()
+        log(f"> {name} başladı")
         try:
-            got = fn()
-            status[name] = {"ok": bool(got), "count": len(got)}
-            fresh += got
+            got = sources[name]()
+            log(f"< {name}: {len(got)} ilan ({time.time() - t0:.0f} sn)")
+            return name, got, None
         except Exception as e:  # bir kaynak bozulursa diğerleri devam etsin
             log(f"  ! {name} hata: {type(e).__name__}: {str(e)[:200]}")
-            status[name] = {"ok": False, "count": 0, "error": type(e).__name__}
+            return name, [], type(e).__name__
+
+    status, fresh = {}, []
+    with ThreadPoolExecutor(max_workers=len(sources)) as ex:  # her site ayrı iş parçacığında
+        for name, got, err in ex.map(run, sources):
+            status[name] = {"ok": bool(got), "count": len(got)} | ({"error": err} if err else {})
+            fresh += got
 
     now_iso = NOW.isoformat(timespec="minutes")
     merged: dict[str, dict] = {}
@@ -367,22 +537,32 @@ def main() -> int:
         j["posted"] = j.get("posted") or (prev or {}).get("posted") or j["first_seen"][:10]
         merged[j["id"]] = enrich(j)
 
-    cutoff = (NOW - dt.timedelta(days=KEEP_DAYS)).isoformat()
-    for jid, j in old.items():  # bu turda görünmeyen eski ilanları bir süre tut
-        if jid not in merged and j.get("last_seen", "") >= cutoff:
+    keep_cut = (NOW - dt.timedelta(days=KEEP_DAYS)).isoformat()
+    gone_cut = (NOW - dt.timedelta(days=GONE_DAYS)).isoformat()
+    for jid, j in old.items():  # bu turda görünmeyen eski ilanlar
+        if jid in merged:
+            continue
+        src_ok = status.get(j.get("source"), {}).get("ok")
+        if j.get("last_seen", "") >= (gone_cut if src_ok else keep_cut):
             merged[jid] = j
 
     # aynı ilan farklı sitelerde -> tek kart, diğer kaynaklar "also" olarak eklenir
     by_key: dict[str, dict] = {}
-    for j in sorted(merged.values(), key=lambda x: x["first_seen"]):
+    for j in sorted(merged.values(), key=lambda x: (x["first_seen"], x["source"] != "kariyer.net")):
+        j.pop("also", None)
         k = norm_key(j)
-        if k in by_key and by_key[k]["source"] != j["source"]:
-            also = by_key[k].setdefault("also", [])
-            if not any(a["url"] == j["url"] for a in also):
-                also.append({"source": j["source"], "url": j["url"]})
-        else:
-            j.pop("also", None) if k not in by_key else None
-            by_key.setdefault(k, j)
+        first = by_key.get(k)
+        if first is None:
+            by_key[k] = j
+        elif first["source"] != j["source"] and not any(a["source"] == j["source"] for a in first.get("also", [])):
+            first.setdefault("also", []).append({"source": j["source"], "url": j["url"]})
+            for f in ("district", "side", "logo", "snippet", "job_type", "work_model"):
+                if not first.get(f) and j.get(f):
+                    first[f] = j[f]
+        elif first["source"] == j["source"]:
+            # aynı sitede aynı başlık+firma ama farklı ilçe -> ayrı ilan say
+            k2 = k + "|" + (j.get("district") or j["id"])
+            by_key.setdefault(k2, j)
     jobs = sorted(by_key.values(), key=lambda x: (x.get("posted") or "", x["first_seen"]), reverse=True)
 
     data = {"updated": now_iso, "city": "İstanbul", "sources": status, "count": len(jobs), "jobs": jobs}

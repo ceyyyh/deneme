@@ -18,6 +18,8 @@
   --src-linkedin: #0a66c2;
   --src-indeed: #2557a7;
   --src-secretcv: #1f9d55;
+  --src-isbul: #c2255c;
+  --src-elemanonline: #0b7285;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -28,7 +30,7 @@
     --ink: #ececef; --ink-2: #b3b3ba; --ink-3: #85858d; --line: #2f2f34;
     --shadow: 0 1px 2px rgba(0,0,0,.4);
     --src-kariyer: #b28bff; --src-eleman: #ff9a5c; --src-linkedin: #71b7fb;
-    --src-indeed: #8fb0ff; --src-secretcv: #5fd394;
+    --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8;
     color-scheme: dark;
   }
 }
@@ -39,7 +41,7 @@
   --ink: #ececef; --ink-2: #b3b3ba; --ink-3: #85858d; --line: #2f2f34;
   --shadow: 0 1px 2px rgba(0,0,0,.4);
   --src-kariyer: #b28bff; --src-eleman: #ff9a5c; --src-linkedin: #71b7fb;
-  --src-indeed: #8fb0ff; --src-secretcv: #5fd394;
+  --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8;
   color-scheme: dark;
 }
 
@@ -157,6 +159,8 @@ legend { float: left; width: 100%; font-weight: 650; font-size: 12px; color: var
 .src-linkedin { color: var(--src-linkedin); }
 .src-indeed { color: var(--src-indeed); }
 .src-secretcv { color: var(--src-secretcv); }
+.src-isbul-net { color: var(--src-isbul); }
+.src-elemanonline { color: var(--src-elemanonline); }
 .when { margin-left: auto; font-size: 12px; color: var(--ink-3); }
 .more { display: block; margin: 16px auto 0; padding: 10px 22px; }
 
