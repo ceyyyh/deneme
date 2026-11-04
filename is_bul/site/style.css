@@ -20,6 +20,7 @@
   --src-secretcv: #1f9d55;
   --src-isbul: #c2255c;
   --src-elemanonline: #0b7285;
+  --src-company: #5c940d;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
@@ -30,7 +31,7 @@
     --ink: #ececef; --ink-2: #b3b3ba; --ink-3: #85858d; --line: #2f2f34;
     --shadow: 0 1px 2px rgba(0,0,0,.4);
     --src-kariyer: #b28bff; --src-eleman: #ff9a5c; --src-linkedin: #71b7fb;
-    --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8;
+    --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8; --src-company: #a9e34b;
     color-scheme: dark;
   }
 }
@@ -41,7 +42,7 @@
   --ink: #ececef; --ink-2: #b3b3ba; --ink-3: #85858d; --line: #2f2f34;
   --shadow: 0 1px 2px rgba(0,0,0,.4);
   --src-kariyer: #b28bff; --src-eleman: #ff9a5c; --src-linkedin: #71b7fb;
-  --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8;
+  --src-indeed: #8fb0ff; --src-secretcv: #5fd394; --src-isbul: #f783ac; --src-elemanonline: #66d9e8; --src-company: #a9e34b;
   color-scheme: dark;
 }
 
@@ -151,6 +152,11 @@ legend { float: left; width: 100%; font-weight: 650; font-size: 12px; color: var
 .meta svg { width: 14px; height: 14px; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
 .tag { font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+.tag.blue { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); border-color: transparent; }
+.tag.white { background: var(--brand-soft); color: var(--brand-ink); border-color: transparent; }
+.km { font-weight: 650; color: var(--ink); }
+.hint { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; line-height: 1.4; }
+.seg.seg-3 { grid-template-columns: repeat(3, 1fr); }
 .tag.new { background: color-mix(in srgb, var(--new) 14%, transparent); color: var(--new); border-color: transparent; }
 .src { font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
 .src::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: currentColor; }
@@ -161,6 +167,7 @@ legend { float: left; width: 100%; font-weight: 650; font-size: 12px; color: var
 .src-secretcv { color: var(--src-secretcv); }
 .src-isbul-net { color: var(--src-isbul); }
 .src-elemanonline { color: var(--src-elemanonline); }
+.src-kariyer-sayfasi { color: var(--src-company); }
 .when { margin-left: auto; font-size: 12px; color: var(--ink-3); }
 .more { display: block; margin: 16px auto 0; padding: 10px 22px; }
 

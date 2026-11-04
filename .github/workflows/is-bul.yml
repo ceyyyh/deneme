@@ -7,11 +7,13 @@ on:
     - cron: "23 */3 * * *"   # 3 saatte bir (UTC); bir tur ~5-10 dk sürer
   workflow_dispatch:          # Actions sekmesinden elle de çalıştırılabilir
   push:
+    branches: [claude/ai-job-search-repo-rkuvtt]   # Pages yalnız varsayılan daldan yayınlanabilir
     paths:
       - "is_bul/site/index.html"
       - "is_bul/site/app.js"
       - "is_bul/site/style.css"
       - "is_bul/scrape.py"
+      - "is_bul/geo.json"
 
 permissions:
   contents: write
@@ -25,7 +27,7 @@ concurrency:
 jobs:
   scrape-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 55
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

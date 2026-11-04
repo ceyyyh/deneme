@@ -394,47 +394,128 @@ def scrape_elemanonline(max_pages: int) -> list[dict]:
 
 
 # ---------------------------------------------------------------- JobSpy
-def scrape_jobspy(site: str, wanted: int) -> list[dict]:
+TERMS_TR = ["", "satış", "muhasebe", "yazılım", "mühendis", "pazarlama", "lojistik", "insan kaynakları",
+            "müşteri hizmetleri", "finans", "depo", "garson", "uzman", "yönetici", "stajyer", "operasyon",
+            "teknisyen", "satın alma", "tasarım", "asistan", "hemşire", "öğretmen", "şoför", "kurye", "güvenlik",
+            "temizlik", "mağaza", "kasiyer", "aşçı", "barista", "danışman", "proje", "kalite", "üretim", "bakım",
+            "elektrik", "avukat", "çağrı merkezi", "e-ticaret", "sosyal medya", "grafik", "editör", "operatör",
+            "kaynak", "forklift", "resepsiyon", "eczane", "diş", "fizyoterapist", "sekreter", "ön muhasebe"]
+TERMS_EN = ["developer", "engineer", "sales", "marketing", "analyst", "designer", "manager", "specialist",
+            "assistant", "consultant", "data", "product", "IT", "support", "HR", "recruiter", "finance",
+            "accounting", "legal", "supply chain", "procurement", "logistics", "customer service", "software",
+            "backend", "frontend", "devops", "QA", "mobile", "intern"]
+
+
+def scrape_jobspy(site: str, per_term: int, cursor: dict, budget_s: int, quick: bool = False) -> list[dict]:
+    """Tek arama en fazla ~1000 sonuç verdiği için çok sayıda arama terimiyle tarar.
+    LinkedIn hız sınırı (429) koyduğundan her tur bir süre bütçesiyle çalışır ve
+    kaldığı terimi `cursor`a yazar; sonraki tur oradan devam eder."""
     from jobspy import scrape_jobs  # github.com/speedyapply/JobSpy
 
-    df = scrape_jobs(
-        site_name=[site],
-        location="Istanbul, Turkey",
-        results_wanted=wanted,
-        hours_old=24 * KEEP_DAYS,
-        country_indeed="turkey",
-        linkedin_fetch_description=False,
-        verbose=0,
-    )
+    terms = TERMS_TR + TERMS_EN
+    i = cursor.get("i", 0) % len(terms)
+    t0, done, found = time.time(), 0, {}
+    while done < (1 if quick else len(terms)) and time.time() - t0 < budget_s:
+        term = terms[i]
+        try:
+            df = scrape_jobs(
+                site_name=[site], search_term=term or None, location="Istanbul, Turkey",
+                results_wanted=per_term, hours_old=24 * KEEP_DAYS, country_indeed="turkey",
+                linkedin_fetch_description=False, verbose=0,
+            )
+        except Exception as e:  # noqa: BLE001
+            log(f"  ! {site} '{term}': {type(e).__name__}")
+            df = None
+        n0 = len(found)
+        for _, r in (df.iterrows() if df is not None else []):
+            url = clean(r.get("job_url"))
+            title = clean(r.get("title"))
+            if not url or not title or url in found:
+                continue
+            posted = r.get("date_posted")
+            posted = posted.isoformat() if hasattr(posted, "isoformat") else (clean(posted) or None)
+            jt = clean(r.get("job_type"))
+            jt = {"fulltime": "Tam Zamanlı", "parttime": "Yarı Zamanlı", "internship": "Staj",
+                  "contract": "Sözleşmeli", "temporary": "Geçici"}.get(jt.split(",")[0], jt)
+            desc = re.sub(r"[*#_\\]+", "", clean(r.get("description")))
+            logo = clean(r.get("company_logo"))
+            found[url] = {
+                "source": site,
+                "title": title,
+                "company": clean(r.get("company")),
+                "location": clean(r.get("location")).replace(", T34", "").replace(", Türkiye", ""),
+                "work_model": "Uzaktan" if r.get("is_remote") is True else "",
+                "job_type": jt,
+                "sector": clean(r.get("company_industry")),
+                "posted": posted,
+                "url": url,
+                "logo": logo if logo.startswith("http") else "",
+                "snippet": desc[:200],
+            }
+        log(f"  {site} '{term}': +{len(found) - n0} (toplam {len(found)})")
+        i, done = (i + 1) % len(terms), done + 1
+        if site == "linkedin" and not quick:
+            time.sleep(10)  # LinkedIn'e nazik ol
+    cursor.clear()
+    cursor["i"] = i
+    return list(found.values())
+
+
+# ---------------------------------------------------------------- şirket kariyer sayfaları
+# Haiku ajanlarıyla araştırılıp tek tek doğrulanmış, herkese açık ATS ilan feed'leri.
+# (Büyük Türk işverenlerinin çoğu ilanlarını zaten kariyer.net/eleman.net/SecretCV'de yayınlıyor.)
+CAREER_FEEDS = [
+    ("Trendyol", "lever", "trendyol"),
+    ("Dream Games", "lever", "dreamgames"),
+    ("Dream Games", "greenhouse", "dreamgames"),
+    ("iyzico", "lever", "iyzico"),
+    ("Çiçeksepeti", "lever", "ciceksepeti"),
+    ("Codeway", "ashby", "codeway"),
+    ("OKX", "greenhouse", "okx"),
+    ("Bybit", "greenhouse", "bybit"),
+]
+IST_RE = re.compile(r"istanbul|İstanbul", re.I)
+
+
+def scrape_career_pages() -> list[dict]:
     out = []
-    for _, r in df.iterrows():
-        url = clean(r.get("job_url"))
-        title = clean(r.get("title"))
-        if not url or not title:
-            continue
-        posted = r.get("date_posted")
-        posted = posted.isoformat() if hasattr(posted, "isoformat") else (clean(posted) or None)
-        model = "Uzaktan" if r.get("is_remote") is True else ""
-        jt = clean(r.get("job_type"))
-        jt = {"fulltime": "Tam Zamanlı", "parttime": "Yarı Zamanlı", "internship": "Staj",
-              "contract": "Sözleşmeli", "temporary": "Geçici"}.get(jt.split(",")[0], jt)
-        desc = clean(r.get("description"))
-        desc = re.sub(r"[*#_\\]+", "", desc)
-        out.append({
-            "source": "linkedin" if site == "linkedin" else "indeed",
-            "title": title,
-            "company": clean(r.get("company")),
-            "location": clean(r.get("location")).replace(", T34", "").replace(", Türkiye", ""),
-            "work_model": model,
-            "job_type": jt,
-            "sector": clean(r.get("company_industry")),
-            "posted": posted,
-            "url": url,
-            "logo": clean(r.get("company_logo")) if clean(r.get("company_logo")).startswith("http") else "",
-            "snippet": desc[:200],
-        })
-    log(f"  {site}: {len(out)}")
-    return out
+    for company, ats, token in CAREER_FEEDS:
+        if ats == "lever":
+            txt = get(f"https://api.lever.co/v0/postings/{token}?mode=json")
+            for r in json.loads(txt) if txt else []:
+                cat = r.get("categories") or {}
+                loc = " / ".join(filter(None, [cat.get("location")] + (cat.get("allLocations") or [])))
+                if not IST_RE.search(loc):
+                    continue
+                ts = r.get("createdAt")
+                out.append({"title": clean(r.get("text")), "url": clean(r.get("hostedUrl")), "location": clean(loc),
+                            "job_type": clean(cat.get("commitment")), "work_model": "Uzaktan" if r.get("workplaceType") == "remote"
+                            else "Hibrit" if r.get("workplaceType") == "hybrid" else "",
+                            "posted": dt.datetime.fromtimestamp(ts / 1000, TZ).date().isoformat() if ts else None,
+                            "snippet": clean(r.get("descriptionPlain"))[:200], "company": company})
+        elif ats == "greenhouse":
+            txt = get(f"https://boards-api.greenhouse.io/v1/boards/{token}/jobs")
+            for r in (json.loads(txt).get("jobs", []) if txt else []):
+                loc = clean((r.get("location") or {}).get("name"))
+                if not IST_RE.search(loc):
+                    continue
+                out.append({"title": clean(r.get("title")), "url": clean(r.get("absolute_url")), "location": loc,
+                            "job_type": "", "work_model": "", "posted": clean(r.get("updated_at"))[:10] or None,
+                            "snippet": "", "company": company})
+        elif ats == "ashby":
+            txt = get(f"https://api.ashbyhq.com/posting-api/job-board/{token}")
+            for r in (json.loads(txt).get("jobs", []) if txt else []):
+                loc = clean(" / ".join([r.get("location") or ""] + [x.get("location", "") for x in r.get("secondaryLocations") or []]))
+                if not IST_RE.search(loc):
+                    continue
+                out.append({"title": clean(r.get("title")), "url": clean(r.get("jobUrl")), "location": loc,
+                            "job_type": clean(r.get("employmentType")).replace("FullTime", "Tam Zamanlı"),
+                            "work_model": "Uzaktan" if r.get("isRemote") else "",
+                            "posted": clean(r.get("publishedAt"))[:10] or None, "snippet": "", "company": company})
+    for j in out:
+        j.update({"source": "kariyer-sayfasi", "sector": "", "logo": ""})
+    log(f"  şirket kariyer sayfaları: {len(out)}")
+    return [j for j in out if j["title"] and j["url"].startswith("https://")]
 
 
 # ---------------------------------------------------------------- zenginleştirme
@@ -470,17 +551,103 @@ def tr_lower(s: str) -> str:
     return s.replace("I", "ı").replace("İ", "i").lower()
 
 
+def fold(s: str) -> str:
+    """Türkçe karakterleri sadeleştirir: 'Sarıyer' == 'Sariyer' == 'SARIYER'."""
+    return tr_lower(s or "").translate(str.maketrans("ıişğçöüâî", "iisgcouai"))
+
+
+# ---------------------------------------------------------------- konum ve eve uzaklık
+GEO = {}
+_geo_path = Path(__file__).parent / "geo.json"
+if _geo_path.exists():
+    GEO = json.loads(_geo_path.read_text("utf-8"))
+_DISTRICT_NAMES = {d for d, _, _ in DISTRICTS}
+# başlıkta kişi adı vb. olarak da geçebilen ilçe adları başlıktan eşleştirilmez
+_TITLE_UNSAFE = {"Fatih", "Adalar"}
+_D_RX = {d: re.compile(rf"(?<![a-z]){re.escape(fold(d))}(?![a-z])") for d in _DISTRICT_NAMES | {"Eyüpsultan"}}
+_SEMTS = {k: v for k, v in GEO.get("semts", {}).items() if k not in _DISTRICT_NAMES}
+_S_RX = {k: re.compile(rf"(?<![a-z]){re.escape(fold(k))}(?![a-z])") for k in _SEMTS}
+
+
+def _find_district(text: str, title: bool = False) -> str:
+    f = fold(text)
+    for d, rx in _D_RX.items():
+        if title and d in _TITLE_UNSAFE:
+            continue
+        if rx.search(f):
+            return "Eyüp" if d == "Eyüpsultan" else d
+    return ""
+
+
+def _find_semt(text: str) -> str:
+    f = fold(text)
+    return next((k for k, rx in _S_RX.items() if rx.search(f)), "")
+
+
+def locate(j: dict) -> None:
+    """İlana en kesin konumu ve evden yol mesafesini ekler.
+    dist = [km] (semt merkezi) ya da [en yakın, ortanca, en uzak] (yalnız ilçe biliniyorsa)."""
+    loc, title = j.get("location", ""), j.get("title", "")
+    if not j.get("district"):
+        j["district"] = _find_district(loc) or _find_district(title, title=True)
+    semt = _find_semt(loc) or _find_semt(title)
+    if semt and j["district"] and _SEMTS[semt]["district"] != j["district"]:
+        semt = ""  # semt başka ilçede -> ilçe bilgisine güven
+    if semt and not j["district"]:
+        j["district"] = _SEMTS[semt]["district"]
+    j["semt"] = semt
+    if semt:
+        j["dist"], j["dist_kind"] = [_SEMTS[semt]["km"]], "semt"
+    elif j["district"] in GEO.get("districts", {}):
+        g = GEO["districts"][j["district"]]
+        j["dist"], j["dist_kind"] = [g["min"], g["median"], g["max"]], "ilçe"
+    else:
+        j.pop("dist", None)
+        j.pop("dist_kind", None)
+
+
+# ---------------------------------------------------------------- mavi / beyaz yaka
+_WHITE_TITLE = re.compile(r"müdür|yönetici|manager|mühendis|engineer|uzman|specialist|analist|analyst|direktör|director|"
+                          r"koordinatör|coordinator|developer|geliştirici|yazılım|software|danışmanı \(it\)|muhasebe|"
+                          r"finans|avukat|hukuk|insan kaynakları|\bik\b|\bhr\b|recruiter|mimar|tasarımcı|designer|"
+                          r"öğretmen|eğitmen|doktor|hekim|eczacı|psikolog|diyetisyen|editör|planlama|satın ?alma|"
+                          r"executive|lead|head of|consultant|asistanı|sekreter|ofis|data|veri|product|ürün")
+_BLUE_TITLE = re.compile(r"satış danışman|satış personel|satış eleman|satış temsilcisi \(mağaza|eleman|personel|işçi|operatör|şoför|sürücü|kurye|garson|komi|aşçı|aşcı|temizlik|"
+                         r"güvenlik görevlisi|bekçi|usta|kalfa|çırak|depocu|forklift|kasiyer|reyon|paketleme|montaj|"
+                         r"kaynakçı|tezgahtar|barista|bulaşık|hasta bakıcı|bakıcı|teknisyen|tekniker|şef garson|"
+                         r"ekip üyesi|servis|vale|kat görevlisi|hizmetli|dağıtım|sevkiyat|elektrikçi|boyacı|"
+                         r"tesisatçı|terzi|makinist|ütücü|kasap|fırıncı|pastacı|şarküteri|market|mağaza")
+_BLUE_CATS = {"Üretim & Teknik", "Lojistik & Şoför", "Yeme-İçme & Turizm", "Temizlik & Güvenlik", "Mağaza & Perakende"}
+_WHITE_CATS = {"Yazılım & IT", "Muhasebe & Finans", "Mühendislik & İnşaat", "İK & İdari", "Hukuk", "Tasarım & Medya",
+               "Eğitim", "Müşteri Hizmetleri", "Satış & Pazarlama", "Sağlık"}
+
+
+def collar(j: dict) -> str:
+    t = tr_lower(j.get("title", ""))
+    if _WHITE_TITLE.search(t) and not re.search(r"mağaza müdür yardımcısı|şef garson", t):
+        return "Beyaz yaka"
+    if _BLUE_TITLE.search(t):
+        return "Mavi yaka"
+    if j.get("category") in _BLUE_CATS:
+        return "Mavi yaka"
+    if j.get("category") in _WHITE_CATS:
+        return "Beyaz yaka"
+    return ""
+
+
 def enrich(j: dict) -> dict:
     title, sector = tr_lower(j["title"]), tr_lower(j.get("sector", ""))
     j["category"] = (next((n for n, rx in CAT_RE if rx.search(title)), None)
                      or next((n for n, rx in CAT_RE if sector and rx.search(sector)), "Diğer"))
+    locate(j)
     loc = tr_lower(j.get("location", ""))
-    if not j.get("district"):
-        j["district"] = next((d for d, side, _ in DISTRICTS if tr_lower(d) in loc), "")
+    if j.get("district") and not j.get("side"):
+        j["side"] = next((side for d, side, _ in DISTRICTS if d == j["district"]), "")
     if not j.get("side"):
-        j["side"] = (next((side for d, side, _ in DISTRICTS if d == j["district"]), "") if j["district"]
-                     else "Avrupa" if any(x in loc for x in AVRUPA)
-                     else "Anadolu" if any(x in loc for x in ANADOLU) else "")
+        floc = fold(loc)
+        j["side"] = ("Avrupa" if re.search(r"avrupa|\(avr", floc) else
+                     "Anadolu" if re.search(r"anadolu|asya", floc) else "")
+    j["collar"] = collar(j)
     text = tr_lower(f"{j['title']} {j.get('work_model', '')} {j.get('job_type', '')} {loc}")
     if not j.get("work_model"):
         if re.search(r"uzaktan|remote|evden", text):
@@ -520,15 +687,17 @@ def main() -> int:
             old_data = json.loads(args.out.read_text("utf-8"))
         except ValueError:
             old_data = {}
-    cursor = dict((old_data.get("cursor") or {}).get("kariyer.net") or {})
+    cur = {k: dict((old_data.get("cursor") or {}).get(k) or {}) for k in ("kariyer.net", "linkedin", "indeed")}
+    cursor = cur["kariyer.net"]
     sources = {
         "kariyer.net": lambda: scrape_kariyer(1 if q else 100, not q, cursor),
         "eleman.net": lambda: scrape_eleman(1 if q else 300),
         "secretcv": lambda: scrape_secretcv(not q),
         "isbul.net": lambda: scrape_isbul(1 if q else 100),
         "elemanonline": lambda: scrape_elemanonline(1 if q else 100),
-        "indeed": lambda: scrape_jobspy("indeed", 30 if q else 1000),
-        "linkedin": lambda: scrape_jobspy("linkedin", 20 if q else 150),
+        "indeed": lambda: scrape_jobspy("indeed", 30 if q else 1000, cur["indeed"], 240, q),
+        "linkedin": lambda: scrape_jobspy("linkedin", 20 if q else 100, cur["linkedin"], 900, q),
+        "kariyer-sayfasi": scrape_career_pages,
     }
 
     old = {j["id"]: j for j in old_data.get("jobs", []) if "id" in j}
@@ -565,7 +734,8 @@ def main() -> int:
         j["posted"] = j.get("posted") or (prev or {}).get("posted") or j["first_seen"][:10]
         merged[j["id"]] = enrich(j)
 
-    status["kariyer.net"]["partial"] = True  # her tur listenin bir parçası okunur
+    for name in ("kariyer.net", "linkedin", "indeed"):  # her tur listenin bir parçası okunur
+        status[name]["partial"] = True
     keep_cut = (NOW - dt.timedelta(days=KEEP_DAYS)).isoformat()
     partial_cut = (NOW - dt.timedelta(days=PARTIAL_KEEP_DAYS)).isoformat()
     gone_cut = (NOW - dt.timedelta(days=GONE_DAYS)).isoformat()
@@ -595,9 +765,11 @@ def main() -> int:
             # aynı sitede aynı başlık+firma ama farklı ilçe -> ayrı ilan say
             k2 = k + "|" + (j.get("district") or j["id"])
             by_key.setdefault(k2, j)
+    for j in by_key.values():  # eski ilanlar da yeni alanları (mesafe, yaka) alsın
+        enrich(j)
     jobs = sorted(by_key.values(), key=lambda x: (x.get("posted") or "", x["first_seen"]), reverse=True)
 
-    data = {"updated": now_iso, "city": "İstanbul", "sources": status, "cursor": {"kariyer.net": cursor},
+    data = {"updated": now_iso, "city": "İstanbul", "home": GEO.get("home", {}).get("name"), "sources": status, "cursor": cur,
             "count": len(jobs), "jobs": jobs}
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), "utf-8")
