@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>İşBul İstanbul</title>
+  <meta name="description" content="İstanbul iş ilanları tek yerde: kariyer.net, eleman.net, LinkedIn, Indeed ve SecretCV ilanları otomatik güncellenir.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%235b3df5'/><path d='M10 12h12v11H10z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/><path d='M13 12V9.5h6V12' fill='none' stroke='white' stroke-width='2.4'/></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="./" aria-label="İşBul İstanbul ana sayfa">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" width="30" height="30"><rect width="32" height="32" rx="8" fill="currentColor"/><path d="M10 12h12v11H10z" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/><path d="M13 12V9.5h6V12" fill="none" stroke="#fff" stroke-width="2.4"/></svg>
+        </span>
+        <span class="brand-name">İşBul <b>İstanbul</b></span>
+      </a>
+      <div class="updated" id="updated" aria-live="polite">Yükleniyor…</div>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="wrap">
+      <h1 class="hero-title">İstanbul'daki tüm iş ilanları, <span>tek aramada.</span></h1>
+      <p class="hero-sub" id="heroSub">kariyer.net · eleman.net · LinkedIn · Indeed · SecretCV</p>
+      <form class="search" id="searchForm" role="search">
+        <label class="field field-q">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="q" type="search" placeholder="Pozisyon, firma veya kelime (ör. şoför, muhasebe)" autocomplete="off" enterkeyhint="search">
+        </label>
+        <label class="field field-loc">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          <select id="district" aria-label="İlçe">
+            <option value="">Tüm İstanbul</option>
+            <option value="side:Avrupa">Avrupa Yakası</option>
+            <option value="side:Anadolu">Anadolu Yakası</option>
+          </select>
+        </label>
+        <button class="btn-primary" type="submit">İş Bul</button>
+      </form>
+    </div>
+  </section>
+
+  <nav class="chips-bar" aria-label="Kategoriler">
+    <div class="wrap chips" id="chips"></div>
+  </nav>
+
+  <main class="wrap layout">
+    <aside class="filters" id="filters" aria-label="Filtreler">
+      <div class="filters-head">
+        <h2>Filtreler</h2>
+        <button class="link" id="clearAll" type="button">Temizle</button>
+        <button class="icon-btn close-filters" id="closeFilters" type="button" aria-label="Filtreleri kapat">✕</button>
+      </div>
+      <fieldset>
+        <legend>İlan tarihi</legend>
+        <div class="seg" id="dateSeg">
+          <label><input type="radio" name="date" value="0" checked><span>Tümü</span></label>
+          <label><input type="radio" name="date" value="1"><span>Bugün</span></label>
+          <label><input type="radio" name="date" value="3"><span>3 gün</span></label>
+          <label><input type="radio" name="date" value="7"><span>7 gün</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Çalışma şekli</legend>
+        <div class="checks" id="modelChecks"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Çalışma tipi</legend>
+        <div class="checks" id="typeChecks"></div>
+      </fieldset>
+      <fieldset>
+        <legend>Kaynak site</legend>
+        <div class="checks" id="sourceChecks"></div>
+      </fieldset>
+      <button class="btn-primary show-results" id="showResults" type="button">Sonuçları göster</button>
+    </aside>
+
+    <section class="results" aria-label="İlanlar">
+      <div class="results-head">
+        <div>
+          <h2 id="resultCount">İlanlar</h2>
+          <div class="active-filters" id="activeFilters"></div>
+        </div>
+        <div class="results-tools">
+          <button class="btn-ghost open-filters" id="openFilters" type="button">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M10 18h4"/></svg> Filtrele <span class="badge-count" id="filterCount" hidden></span>
+          </button>
+          <label class="sort">
+            <span class="sr-only">Sırala</span>
+            <select id="sort">
+              <option value="new">En yeni</option>
+              <option value="company">Firma (A-Z)</option>
+              <option value="title">Pozisyon (A-Z)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+      <ol class="list" id="list" aria-live="polite"></ol>
+      <div class="empty" id="empty" hidden>
+        <div class="empty-art" aria-hidden="true">🔍</div>
+        <h3>Bu aramaya uygun ilan bulunamadı</h3>
+        <p>Kelimeyi kısaltmayı veya filtreleri temizlemeyi deneyin.</p>
+        <button class="btn-ghost" type="button" id="emptyClear">Filtreleri temizle</button>
+      </div>
+      <button class="btn-ghost more" id="more" type="button" hidden>Daha fazla ilan göster</button>
+    </section>
+
+    <aside class="detail" id="detail" aria-label="İlan detayı">
+      <div class="detail-empty">
+        <div class="empty-art" aria-hidden="true">👈</div>
+        <p>Detayını görmek için bir ilana tıklayın.</p>
+      </div>
+    </aside>
+  </main>
+
+  <div class="sheet-backdrop" id="backdrop" hidden></div>
+
+  <footer class="footer">
+    <div class="wrap">
+      <p>İlanlar herkese açık listeleme sayfalarından otomatik toplanır ve birkaç saatte bir güncellenir. Başvuru her zaman ilanın kendi sitesinde yapılır.</p>
+      <p class="muted" id="sourceStatus"></p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
