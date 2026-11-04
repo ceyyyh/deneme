@@ -25,6 +25,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlsplit
 import unicodedata
 from pathlib import Path
 
@@ -38,6 +39,9 @@ TODAY = NOW.date()
 KEEP_DAYS = 14          # kaynağı hata verdiyse ilanlar en fazla bu kadar gün tutulur
 GONE_DAYS = 2           # kaynağı sorunsuz tarandığı halde bu kadar gündür görünmeyen ilan kapanmış sayılır
 DELAY = 1.0             # aynı siteye art arda istekler arası bekleme (sn)
+HOST_DELAY = {"www.kariyer.net": 4.0}   # hız sınırı koyan sitelere daha seyrek istek
+BACKOFF = 90            # 403/429 gelince bu kadar bekleyip bir kez daha denenir
+BLOCKED: set[str] = set()   # bu turda bizi durduran siteler; tekrar zorlanmaz
 
 _local = threading.local()
 
@@ -55,18 +59,30 @@ def log(*a):
 
 
 def get(url: str) -> str | None:
-    try:
-        r = session().get(url, timeout=30)
-        if r.status_code != 200:
-            log(f"  ! {r.status_code} {url}")
+    host = urlsplit(url).hostname or ""
+    for attempt in (1, 2):
+        if host in BLOCKED:
             return None
-        r.encoding = r.encoding or "utf-8"
-        return r.text
-    except requests.RequestException as e:
-        log(f"  ! {type(e).__name__} {url}")
+        try:
+            r = session().get(url, timeout=30)
+        except requests.RequestException as e:
+            log(f"  ! {type(e).__name__} {url}")
+            time.sleep(HOST_DELAY.get(host, DELAY))
+            return None
+        time.sleep(HOST_DELAY.get(host, DELAY))
+        if r.status_code == 200:
+            r.encoding = r.encoding or "utf-8"
+            return r.text
+        log(f"  ! {r.status_code} {url}")
+        if r.status_code in (403, 429) and attempt == 1:
+            log(f"  .. {host} yavaşla dedi, {BACKOFF} sn bekleniyor")
+            time.sleep(BACKOFF)
+            continue
+        if r.status_code in (403, 429):
+            log(f"  !! {host} bu tur için bırakıldı (hız sınırı)")
+            BLOCKED.add(host)
         return None
-    finally:
-        time.sleep(DELAY)
+    return None
 
 
 def clean(s) -> str:
@@ -152,7 +168,7 @@ def _kariyer_cards(html: str) -> list[dict]:
     return out
 
 
-def _kariyer_crawl(slug: str, found: dict, max_pages: int, district=None, side=None) -> int:
+def _kariyer_crawl(slug: str, found: dict, max_pages: int, district=None, side=None, stop_when_known=True) -> int:
     """Bir listeyi, yeni ilan çıkmayana kadar (en fazla max_pages) sayfa sayfa gezer."""
     added = 0
     for p in range(1, max_pages + 1):
@@ -174,19 +190,26 @@ def _kariyer_crawl(slug: str, found: dict, max_pages: int, district=None, side=N
             if district and not prev.get("district"):
                 prev["district"], prev["side"] = district, side
         added += new_here
-        if new_here == 0:
+        if new_here == 0 and stop_when_known:
+            break
+        if len(organic) < 40:  # son sayfa
             break
     return added
 
 
 def scrape_kariyer(max_pages: int, with_districts: bool) -> list[dict]:
     found: dict[str, dict] = {}
-    if with_districts:  # önce ilçeler: ilana ilçe bilgisi de eklenir
-        for name, side, slug in DISTRICTS:
-            n = _kariyer_crawl(f"istanbul+{'asya' if side == 'Anadolu' else 'avrupa'}-{slug}", found, max_pages, name, side)
-            log(f"  kariyer.net {name}: +{n}  (toplam {len(found)})")
+    # önce en verimli liste (İstanbul geneli, sayfa başı ~50 yeni ilan), sonra ilçeler:
+    # ilçeler 100 sayfa sınırının ötesindeki ilanları ve ilanların ilçe bilgisini getirir
     n = _kariyer_crawl("istanbul", found, max_pages)
     log(f"  kariyer.net İstanbul geneli: +{n}  (toplam {len(found)})")
+    if with_districts:
+        for name, side, slug in DISTRICTS:
+            if "www.kariyer.net" in BLOCKED:
+                break
+            n = _kariyer_crawl(f"istanbul+{'asya' if side == 'Anadolu' else 'avrupa'}-{slug}", found, max_pages, name, side,
+                               stop_when_known=False)
+            log(f"  kariyer.net {name}: +{n}  (toplam {len(found)})")
     for j in found.values():
         j.pop("_sponsor", None)
     return list(found.values())
@@ -526,6 +549,11 @@ def main() -> int:
         for name, got, err in ex.map(run, sources):
             status[name] = {"ok": bool(got), "count": len(got)} | ({"error": err} if err else {})
             fresh += got
+    hosts = {"kariyer.net": "www.kariyer.net", "eleman.net": "www.eleman.net", "secretcv": "www.secretcv.com",
+             "isbul.net": "www.isbul.net", "elemanonline": "www.elemanonline.com.tr"}
+    for name, host in hosts.items():
+        if host in BLOCKED:  # yarıda kaldı: görülmeyen ilanlar "kapandı" sayılmasın
+            status[name]["partial"] = True
 
     now_iso = NOW.isoformat(timespec="minutes")
     merged: dict[str, dict] = {}
@@ -542,7 +570,8 @@ def main() -> int:
     for jid, j in old.items():  # bu turda görünmeyen eski ilanlar
         if jid in merged:
             continue
-        src_ok = status.get(j.get("source"), {}).get("ok")
+        st = status.get(j.get("source"), {})
+        src_ok = st.get("ok") and not st.get("partial")
         if j.get("last_seen", "") >= (gone_cut if src_ok else keep_cut):
             merged[jid] = j
 
