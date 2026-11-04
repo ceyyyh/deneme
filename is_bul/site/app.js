@@ -15,10 +15,11 @@
   const SOURCES = {
     "kariyer.net": "kariyer.net", "eleman.net": "eleman.net", "isbul.net": "isbul.net",
     secretcv: "SecretCV", elemanonline: "Eleman Online", indeed: "Indeed", linkedin: "LinkedIn",
+    "kariyer-sayfasi": "Şirket sitesi",
   };
   const PALETTE = ["#5b3df5", "#0a66c2", "#e8590c", "#0f9d58", "#c2255c", "#1098ad", "#7048e8", "#d9480f", "#2b8a3e", "#364fc7"];
 
-  const state = { q: "", loc: "", cat: "", date: 0, models: new Set(), types: new Set(), sources: new Set(), sort: "new", shown: PAGE, selected: null };
+  const state = { q: "", loc: "", cat: "", date: 0, collar: "", maxKm: 0, models: new Set(), types: new Set(), sources: new Set(), sort: "new", shown: PAGE, selected: null };
   let ALL = [], META = {}, TODAY = "";
 
   // ---------- yardımcılar ----------
@@ -47,6 +48,15 @@
     if (h < 24) return `${h} saat önce`;
     return `${Math.round(h / 24)} gün önce`;
   }
+  const fmtKm = (k) => k.toLocaleString("tr-TR", { maximumFractionDigits: 1 });
+  // semt biliniyorsa tek değer; yalnız ilçe biliniyorsa ilçe içindeki noktaların ortancası
+  const typicalKm = (j) => (j.dist ? (j.dist.length === 1 ? j.dist[0] : j.dist[1]) : null);
+  function kmShort(j) {
+    if (!j.dist) return "";
+    return j.dist.length === 1 ? `~${fmtKm(j.dist[0])} km` : `${fmtKm(j.dist[0])}–${fmtKm(j.dist[2])} km`;
+  }
+  const house = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>';
+
   function normModel(m) {
     const f = fold(m);
     if (!f) return "";
@@ -141,6 +151,8 @@
       const d = daysBetween(TODAY, (j.posted || j.first_seen).slice(0, 10));
       if (d >= state.date) return false;
     }
+    if (state.collar && j.collar !== state.collar) return false;
+    if (state.maxKm) { const k = typicalKm(j); if (k === null || k > state.maxKm) return false; }
     if (state.models.size && !state.models.has(j.model)) return false;
     if (state.types.size && !state.types.has(j.type)) return false;
     if (state.sources.size && !state.sources.has(j.source)) return false;
@@ -151,6 +163,7 @@
     const c = (a, b) => (a || "").localeCompare(b || "", "tr");
     if (state.sort === "company") return list.sort((a, b) => c(a.company, b.company));
     if (state.sort === "title") return list.sort((a, b) => c(a.title, b.title));
+    if (state.sort === "near") return list.sort((a, b) => (typicalKm(a) ?? 1e9) - (typicalKm(b) ?? 1e9) || c(b.posted, a.posted));
     return list.sort((a, b) => c(b.posted, a.posted) || c(b.first_seen, a.first_seen));
   }
 
@@ -168,19 +181,21 @@
   const pin = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
 
   function cardHtml(j) {
-    const loc = j.district ? `${j.district}${j.side ? " · " + j.side : ""}` : j.side ? `${j.side} Yakası` : (j.location || "İstanbul");
+    const place = j.semt ? `${j.semt}, ${j.district}` : j.district;
+    const loc = place ? `${place}${j.side ? " · " + j.side : ""}` : j.side ? `${j.side} Yakası` : (j.location || "İstanbul");
     const isNew = j.posted && daysBetween(TODAY, j.posted.slice(0, 10)) <= 0;
     const tags = [
       isNew ? '<span class="tag new">Yeni</span>' : "",
       j.model ? `<span class="tag">${esc(j.model)}</span>` : "",
       j.type ? `<span class="tag">${esc(j.type)}</span>` : "",
+      j.collar ? `<span class="tag ${j.collar === "Mavi yaka" ? "blue" : "white"}">${esc(j.collar)}</span>` : "",
     ].join("");
     return `<li class="card" tabindex="0" data-id="${esc(j.id)}" ${state.selected === j.id ? 'aria-current="true"' : ""}>
       ${logoHtml(j)}
       <div>
         <h3>${esc(j.title)}</h3>
         <div class="company">${esc(j.company || "Firma belirtilmemiş")}</div>
-        <div class="meta"><span>${pin}${esc(loc)}</span><span>${esc(j.category)}</span></div>
+        <div class="meta"><span>${pin}${esc(loc)}</span>${j.dist ? `<span class="km" title="Eve araçla yol mesafesi">${house}${esc(kmShort(j))}</span>` : ""}<span>${esc(j.category)}</span></div>
         <div class="tags">${tags}<span class="src ${srcClass(j.source)}">${esc(SOURCES[j.source] || j.source)}</span><span class="when">${esc(relDay(j.posted))}</span></div>
       </div>
     </li>`;
@@ -216,9 +231,11 @@
     if (state.loc) items.push(["loc", "", el.district.selectedOptions[0]?.textContent.replace(/\s\(\d+\)$/, "") || state.loc]);
     if (state.cat) items.push(["cat", "", state.cat]);
     if (state.date) items.push(["date", "", state.date === 1 ? "Bugün" : `Son ${state.date} gün`]);
+    if (state.collar) items.push(["collar", "", state.collar]);
+    if (state.maxKm) items.push(["maxKm", "", `Eve ≤ ${state.maxKm} km`]);
     for (const k of ["models", "types", "sources"]) for (const v of state[k]) items.push([k, v, SOURCES[v] || v]);
     el.active.innerHTML = items.map(([k, v, t]) => `<button class="af" type="button" data-k="${k}" data-v="${esc(v)}" aria-label="${esc(t)} filtresini kaldır">${esc(t)}</button>`).join("");
-    const n = (state.date ? 1 : 0) + state.models.size + state.types.size + state.sources.size;
+    const n = (state.date ? 1 : 0) + (state.collar ? 1 : 0) + (state.maxKm ? 1 : 0) + state.models.size + state.types.size + state.sources.size;
     el.filterCount.hidden = !n;
     el.filterCount.textContent = n;
   }
@@ -226,6 +243,8 @@
   function syncChecks() {
     el.filters.querySelectorAll("input[type=checkbox]").forEach((c) => { c.checked = state[c.dataset.key].has(c.value); });
     el.filters.querySelectorAll("input[name=date]").forEach((r) => { r.checked = +r.value === state.date; });
+    el.filters.querySelectorAll("input[name=collar]").forEach((r) => { r.checked = r.value === state.collar; });
+    el.filters.querySelectorAll("input[name=km]").forEach((r) => { r.checked = +r.value === state.maxKm; });
     el.q.value = state.q;
     el.district.value = state.loc;
     el.sort.value = state.sort;
@@ -238,9 +257,13 @@
     document.querySelectorAll(".card").forEach((c) => c.toggleAttribute("aria-current", c.dataset.id === id));
     document.querySelectorAll('.card[aria-current]').forEach((c) => c.setAttribute("aria-current", "true"));
     const url = safeUrl(j.url);
-    const loc = [j.district, j.side && `${j.side} Yakası`].filter(Boolean).join(", ") || j.location || "İstanbul";
+    const loc = [j.semt, j.district, j.side && `${j.side} Yakası`].filter(Boolean).join(", ") || j.location || "İstanbul";
+    const home = META.home || "ev";
+    const kmText = !j.dist ? "Hesaplanamadı (ilanda ilçe yok)"
+      : j.dist.length === 1 ? `≈ ${fmtKm(j.dist[0])} km (${j.semt} semt merkezine)`
+      : `${fmtKm(j.dist[0])} – ${fmtKm(j.dist[2])} km (ilanda sadece ilçe var; ilçe içinde nereye düştüğüne göre, ortanca ${fmtKm(j.dist[1])} km)`;
     const rows = [
-      ["Konum", loc], ["Kategori", j.category], ["Çalışma şekli", j.model || "Belirtilmemiş"],
+      ["Konum", loc], ["Eve uzaklık (araçla)", kmText], ["Yaka", j.collar], ["Kategori", j.category], ["Çalışma şekli", j.model || "Belirtilmemiş"],
       ["Çalışma tipi", j.type || j.job_type || "Belirtilmemiş"], ["İlan tarihi", relDay(j.posted)], ["Sektör", j.sector],
       ["Yan haklar", j.perks],
     ].filter(([, v]) => v);
@@ -288,6 +311,8 @@
     if (state.loc) p.set("yer", state.loc);
     if (state.cat) p.set("kategori", state.cat);
     if (state.date) p.set("gun", state.date);
+    if (state.collar) p.set("yaka", state.collar === "Mavi yaka" ? "mavi" : "beyaz");
+    if (state.maxKm) p.set("km", state.maxKm);
     const s = p.toString();
     try { history.replaceState(null, "", s ? "?" + s : location.pathname); } catch (_) { /* önizleme ortamı */ }
   }
@@ -297,6 +322,8 @@
     state.loc = p.get("yer") || "";
     state.cat = p.get("kategori") || "";
     state.date = +p.get("gun") || 0;
+    state.collar = { mavi: "Mavi yaka", beyaz: "Beyaz yaka" }[p.get("yaka")] || "";
+    state.maxKm = +p.get("km") || 0;
   }
 
   // ---------- olaylar ----------
@@ -310,17 +337,19 @@
   el.filters.addEventListener("change", (e) => {
     const i = e.target;
     if (i.name === "date") state.date = +i.value;
+    else if (i.name === "collar") state.collar = i.value;
+    else if (i.name === "km") state.maxKm = +i.value;
     else if (i.dataset.key) i.checked ? state[i.dataset.key].add(i.value) : state[i.dataset.key].delete(i.value);
     reset(); render();
   });
-  const clearAll = () => { Object.assign(state, { q: "", loc: "", cat: "", date: 0 }); state.models.clear(); state.types.clear(); state.sources.clear(); reset(); render(); };
+  const clearAll = () => { Object.assign(state, { q: "", loc: "", cat: "", date: 0, collar: "", maxKm: 0 }); state.models.clear(); state.types.clear(); state.sources.clear(); reset(); render(); };
   $("#clearAll").addEventListener("click", clearAll);
   $("#emptyClear").addEventListener("click", clearAll);
   el.active.addEventListener("click", (e) => {
     const b = e.target.closest(".af"); if (!b) return;
     const k = b.dataset.k;
     if (["models", "types", "sources"].includes(k)) state[k].delete(b.dataset.v);
-    else state[k] = k === "date" ? 0 : "";
+    else state[k] = k === "date" || k === "maxKm" ? 0 : "";
     reset(); render();
   });
   el.more.addEventListener("click", () => { state.shown += PAGE; render(); });

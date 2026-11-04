@@ -55,6 +55,24 @@
         <button class="icon-btn close-filters" id="closeFilters" type="button" aria-label="Filtreleri kapat">✕</button>
       </div>
       <fieldset>
+        <legend>Yaka</legend>
+        <div class="seg seg-3">
+          <label><input type="radio" name="collar" value="" checked><span>Tümü</span></label>
+          <label><input type="radio" name="collar" value="Beyaz yaka"><span>Beyaz</span></label>
+          <label><input type="radio" name="collar" value="Mavi yaka"><span>Mavi</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Eve uzaklık (araçla)</legend>
+        <div class="seg">
+          <label><input type="radio" name="km" value="0" checked><span>Tümü</span></label>
+          <label><input type="radio" name="km" value="10"><span>≤10</span></label>
+          <label><input type="radio" name="km" value="20"><span>≤20</span></label>
+          <label><input type="radio" name="km" value="30"><span>≤30</span></label>
+        </div>
+        <p class="hint">PTT Evleri, Sarıyer'den yol mesafesi (km). Semt biliniyorsa semt merkezine, yalnız ilçe biliniyorsa ilçe içindeki ortanca noktaya göre filtrelenir.</p>
+      </fieldset>
+      <fieldset>
         <legend>İlan tarihi</legend>
         <div class="seg" id="dateSeg">
           <label><input type="radio" name="date" value="0" checked><span>Tümü</span></label>
@@ -92,6 +110,7 @@
             <span class="sr-only">Sırala</span>
             <select id="sort">
               <option value="new">En yeni</option>
+              <option value="near">Eve en yakın</option>
               <option value="company">Firma (A-Z)</option>
               <option value="title">Pozisyon (A-Z)</option>
             </select>
@@ -120,7 +139,8 @@
 
   <footer class="footer">
     <div class="wrap">
-      <p>İlanlar herkese açık listeleme sayfalarından otomatik toplanır ve birkaç saatte bir güncellenir. Başvuru her zaman ilanın kendi sitesinde yapılır.</p>
+      <p>İlanlar herkese açık listeleme sayfalarından ve şirketlerin kariyer sayfalarından otomatik toplanır, birkaç saatte bir güncellenir. Başvuru her zaman ilanın kendi sitesinde yapılır.</p>
+      <p>Eve uzaklık: PTT Evleri Mahallesi (Sarıyer) merkezinden araçla yol mesafesi; OpenStreetMap yol ağı üzerinden OSRM ile hesaplanır. İlan siteleri tam adres vermediği için semt biliniyorsa semt merkezine tek değer, yalnız ilçe biliniyorsa ilçe içindeki en yakın–en uzak nokta aralığı gösterilir.</p>
       <p class="muted" id="sourceStatus"></p>
     </div>
   </footer>

@@ -1,0 +1,876 @@
+{
+ "home": {
+  "name": "PTT Evleri Mahallesi, Sarıyer",
+  "lon": 29.022069,
+  "lat": 41.157397
+ },
+ "method": "araçla yol mesafesi (OSRM, OpenStreetMap yol ağı)",
+ "districts": {
+  "Ataşehir": {
+   "min": 22.3,
+   "median": 31.6,
+   "max": 41.5,
+   "points": 14
+  },
+  "Beykoz": {
+   "min": 19.4,
+   "median": 34.0,
+   "max": 65.9,
+   "points": 137
+  },
+  "Çekmeköy": {
+   "min": 26.8,
+   "median": 45.8,
+   "max": 64.4,
+   "points": 67
+  },
+  "Kadıköy": {
+   "min": 21.4,
+   "median": 26.0,
+   "max": 29.2,
+   "points": 13
+  },
+  "Kartal": {
+   "min": 36.3,
+   "median": 43.2,
+   "max": 48.3,
+   "points": 16
+  },
+  "Maltepe": {
+   "min": 29.9,
+   "median": 34.6,
+   "max": 41.0,
+   "points": 25
+  },
+  "Pendik": {
+   "min": 42.2,
+   "median": 51.9,
+   "max": 79.5,
+   "points": 86
+  },
+  "Sancaktepe": {
+   "min": 33.7,
+   "median": 41.1,
+   "max": 50.9,
+   "points": 32
+  },
+  "Sultanbeyli": {
+   "min": 39.3,
+   "median": 42.2,
+   "max": 44.8,
+   "points": 14
+  },
+  "Şile": {
+   "min": 49.3,
+   "median": 86.1,
+   "max": 116.8,
+   "points": 349
+  },
+  "Tuzla": {
+   "min": 49.3,
+   "median": 56.5,
+   "max": 70.8,
+   "points": 54
+  },
+  "Ümraniye": {
+   "min": 22.5,
+   "median": 28.8,
+   "max": 32.2,
+   "points": 19
+  },
+  "Üsküdar": {
+   "min": 19.3,
+   "median": 21.6,
+   "max": 25.9,
+   "points": 16
+  },
+  "Arnavutköy": {
+   "min": 28.5,
+   "median": 44.8,
+   "max": 106.0,
+   "points": 210
+  },
+  "Avcılar": {
+   "min": 34.3,
+   "median": 42.5,
+   "max": 48.0,
+   "points": 23
+  },
+  "Bağcılar": {
+   "min": 23.2,
+   "median": 27.8,
+   "max": 31.8,
+   "points": 13
+  },
+  "Bakırköy": {
+   "min": 27.3,
+   "median": 34.1,
+   "max": 41.4,
+   "points": 15
+  },
+  "Başakşehir": {
+   "min": 24.7,
+   "median": 33.6,
+   "max": 46.4,
+   "points": 49
+  },
+  "Bayrampaşa": {
+   "min": 22.3,
+   "median": 25.2,
+   "max": 27.3,
+   "points": 6
+  },
+  "Beşiktaş": {
+   "min": 11.2,
+   "median": 13.8,
+   "max": 15.7,
+   "points": 8
+  },
+  "Beylikdüzü": {
+   "min": 45.9,
+   "median": 49.5,
+   "max": 53.3,
+   "points": 18
+  },
+  "Beyoğlu": {
+   "min": 17.3,
+   "median": 18.3,
+   "max": 19.4,
+   "points": 5
+  },
+  "Büyükçekmece": {
+   "min": 47.5,
+   "median": 56.3,
+   "max": 75.4,
+   "points": 69
+  },
+  "Çatalca": {
+   "min": 51.4,
+   "median": 90.8,
+   "max": 169.5,
+   "points": 503
+  },
+  "Esenler": {
+   "min": 22.6,
+   "median": 25.4,
+   "max": 27.7,
+   "points": 9
+  },
+  "Esenyurt": {
+   "min": 38.7,
+   "median": 44.0,
+   "max": 46.9,
+   "points": 20
+  },
+  "Eyüp": {
+   "min": 9.5,
+   "median": 22.7,
+   "max": 47.3,
+   "points": 101
+  },
+  "Fatih": {
+   "min": 22.1,
+   "median": 23.7,
+   "max": 26.8,
+   "points": 8
+  },
+  "Gaziosmanpaşa": {
+   "min": 18.8,
+   "median": 19.8,
+   "max": 21.9,
+   "points": 4
+  },
+  "Güngören": {
+   "min": 26.3,
+   "median": 27.1,
+   "max": 28.0,
+   "points": 2
+  },
+  "Kağıthane": {
+   "min": 10.7,
+   "median": 13.9,
+   "max": 16.3,
+   "points": 6
+  },
+  "Küçükçekmece": {
+   "min": 29.5,
+   "median": 33.9,
+   "max": 39.5,
+   "points": 19
+  },
+  "Sarıyer": {
+   "min": 1.4,
+   "median": 10.3,
+   "max": 23.9,
+   "points": 79
+  },
+  "Silivri": {
+   "min": 70.9,
+   "median": 101.2,
+   "max": 133.8,
+   "points": 383
+  },
+  "Sultangazi": {
+   "min": 18.6,
+   "median": 23.5,
+   "max": 30.8,
+   "points": 14
+  },
+  "Şişli": {
+   "min": 10.0,
+   "median": 16.0,
+   "max": 18.9,
+   "points": 6
+  },
+  "Zeytinburnu": {
+   "min": 24.4,
+   "median": 26.5,
+   "max": 28.0,
+   "points": 5
+  },
+  "Bahçelievler": {
+   "min": 28.0,
+   "median": 31.2,
+   "max": 35.1,
+   "points": 7
+  }
+ },
+ "semts": {
+  "Maslak": {
+   "district": "Sarıyer",
+   "km": 6.9,
+   "lon": 29.020591,
+   "lat": 41.109999
+  },
+  "Ayazağa": {
+   "district": "Sarıyer",
+   "km": 9.3,
+   "lon": 28.99856,
+   "lat": 41.11575
+  },
+  "İstinye": {
+   "district": "Sarıyer",
+   "km": 9.0,
+   "lon": 29.055486,
+   "lat": 41.115051
+  },
+  "Tarabya": {
+   "district": "Sarıyer",
+   "km": 4.6,
+   "lon": 29.053042,
+   "lat": 41.138574
+  },
+  "Yeniköy": {
+   "district": "Sarıyer",
+   "km": 7.0,
+   "lon": 29.070613,
+   "lat": 41.123155
+  },
+  "Emirgan": {
+   "district": "Sarıyer",
+   "km": 9.4,
+   "lon": 29.053689,
+   "lat": 41.103131
+  },
+  "Bahçeköy": {
+   "district": "Sarıyer",
+   "km": 4.0,
+   "lon": 28.991246,
+   "lat": 41.174584
+  },
+  "Rumelihisarı": {
+   "district": "Sarıyer",
+   "km": 11.7,
+   "lon": 29.056712,
+   "lat": 41.084917
+  },
+  "Levent": {
+   "district": "Beşiktaş",
+   "km": 11.3,
+   "lon": 29.01695,
+   "lat": 41.081572
+  },
+  "Etiler": {
+   "district": "Beşiktaş",
+   "km": 11.3,
+   "lon": 29.037599,
+   "lat": 41.082457
+  },
+  "Ortaköy": {
+   "district": "Beşiktaş",
+   "km": 17.8,
+   "lon": 29.02819,
+   "lat": 41.054627
+  },
+  "Bebek": {
+   "district": "Beşiktaş",
+   "km": 12.3,
+   "lon": 29.043959,
+   "lat": 41.079016
+  },
+  "Gayrettepe": {
+   "district": "Beşiktaş",
+   "km": 13.7,
+   "lon": 29.006191,
+   "lat": 41.062226
+  },
+  "Balmumcu": {
+   "district": "Beşiktaş",
+   "km": 13.2,
+   "lon": 29.014769,
+   "lat": 41.059038
+  },
+  "Arnavutköy": {
+   "district": "Beşiktaş",
+   "km": 13.9,
+   "lon": 29.043254,
+   "lat": 41.067234
+  },
+  "Mecidiyeköy": {
+   "district": "Şişli",
+   "km": 12.9,
+   "lon": 28.996253,
+   "lat": 41.070042
+  },
+  "Nişantaşı": {
+   "district": "Şişli",
+   "km": 16.0,
+   "lon": 28.991696,
+   "lat": 41.051687
+  },
+  "Esentepe": {
+   "district": "Şişli",
+   "km": 12.3,
+   "lon": 29.010812,
+   "lat": 41.070774
+  },
+  "Fulya": {
+   "district": "Şişli",
+   "km": 14.7,
+   "lon": 28.997936,
+   "lat": 41.058389
+  },
+  "Bomonti": {
+   "district": "Şişli",
+   "km": 15.8,
+   "lon": 28.980186,
+   "lat": 41.058103
+  },
+  "Kurtuluş": {
+   "district": "Şişli",
+   "km": 16.7,
+   "lon": 28.980742,
+   "lat": 41.047608
+  },
+  "Okmeydanı": {
+   "district": "Şişli",
+   "km": 17.3,
+   "lon": 28.969916,
+   "lat": 41.062381
+  },
+  "Seyrantepe": {
+   "district": "Kağıthane",
+   "km": 9.8,
+   "lon": 28.995726,
+   "lat": 41.10119
+  },
+  "Çağlayan": {
+   "district": "Kağıthane",
+   "km": 14.4,
+   "lon": 28.980513,
+   "lat": 41.070707
+  },
+  "Gültepe": {
+   "district": "Kağıthane",
+   "km": 11.5,
+   "lon": 28.994907,
+   "lat": 41.081002
+  },
+  "Taksim": {
+   "district": "Beyoğlu",
+   "km": 19.1,
+   "lon": 28.985549,
+   "lat": 41.038051
+  },
+  "Karaköy": {
+   "district": "Beyoğlu",
+   "km": 21.4,
+   "lon": 28.974039,
+   "lat": 41.022864
+  },
+  "Galata": {
+   "district": "Beyoğlu",
+   "km": 21.1,
+   "lon": 28.972792,
+   "lat": 41.025286
+  },
+  "Cihangir": {
+   "district": "Beyoğlu",
+   "km": 17.7,
+   "lon": 28.985319,
+   "lat": 41.03304
+  },
+  "Kasımpaşa": {
+   "district": "Beyoğlu",
+   "km": 19.6,
+   "lon": 28.965077,
+   "lat": 41.035042
+  },
+  "Eminönü": {
+   "district": "Fatih",
+   "km": 19.2,
+   "lon": 28.970016,
+   "lat": 41.018286
+  },
+  "Sultanahmet": {
+   "district": "Fatih",
+   "km": 21.2,
+   "lon": 28.976909,
+   "lat": 41.004114
+  },
+  "Aksaray": {
+   "district": "Fatih",
+   "km": 23.7,
+   "lon": 28.950284,
+   "lat": 41.008312
+  },
+  "Laleli": {
+   "district": "Fatih",
+   "km": 23.5,
+   "lon": 28.957317,
+   "lat": 41.009567
+  },
+  "Beyazıt": {
+   "district": "Fatih",
+   "km": 24.6,
+   "lon": 28.966506,
+   "lat": 41.009722
+  },
+  "Sirkeci": {
+   "district": "Fatih",
+   "km": 19.7,
+   "lon": 28.977962,
+   "lat": 41.015017
+  },
+  "Topkapı": {
+   "district": "Fatih",
+   "km": 23.4,
+   "lon": 28.928168,
+   "lat": 41.020711
+  },
+  "Balat": {
+   "district": "Fatih",
+   "km": 21.6,
+   "lon": 28.948293,
+   "lat": 41.032003
+  },
+  "Merter": {
+   "district": "Güngören",
+   "km": 25.3,
+   "lon": 28.896184,
+   "lat": 41.007618
+  },
+  "Bahçelievler": {
+   "district": "Bahçelievler",
+   "km": 28.0,
+   "lon": 28.863314,
+   "lat": 40.995481
+  },
+  "Yenibosna": {
+   "district": "Bahçelievler",
+   "km": 34.0,
+   "lon": 28.825132,
+   "lat": 41.013494
+  },
+  "Şirinevler": {
+   "district": "Bahçelievler",
+   "km": 29.8,
+   "lon": 28.848635,
+   "lat": 40.995652
+  },
+  "Ataköy": {
+   "district": "Bakırköy",
+   "km": 30.8,
+   "lon": 28.856229,
+   "lat": 40.980228
+  },
+  "Yeşilköy": {
+   "district": "Bakırköy",
+   "km": 40.7,
+   "lon": 28.824869,
+   "lat": 40.962653
+  },
+  "Florya": {
+   "district": "Bakırköy",
+   "km": 39.5,
+   "lon": 28.787609,
+   "lat": 40.972898
+  },
+  "Yeşilyurt": {
+   "district": "Bakırköy",
+   "km": 33.0,
+   "lon": 28.837325,
+   "lat": 40.965447
+  },
+  "İkitelli": {
+   "district": "Başakşehir",
+   "km": 28.0,
+   "lon": 28.803895,
+   "lat": 41.071132
+  },
+  "Kayaşehir": {
+   "district": "Başakşehir",
+   "km": 34.3,
+   "lon": 28.767736,
+   "lat": 41.108615
+  },
+  "Halkalı": {
+   "district": "Küçükçekmece",
+   "km": 34.6,
+   "lon": 28.766529,
+   "lat": 41.01837
+  },
+  "Sefaköy": {
+   "district": "Küçükçekmece",
+   "km": 34.2,
+   "lon": 28.797984,
+   "lat": 41.004258
+  },
+  "Hadımköy": {
+   "district": "Arnavutköy",
+   "km": 46.8,
+   "lon": 28.621269,
+   "lat": 41.158559
+  },
+  "İstanbul Havalimanı": {
+   "district": "Arnavutköy",
+   "km": 42.0,
+   "lon": 28.732275,
+   "lat": 41.274868
+  },
+  "Göktürk": {
+   "district": "Eyüp",
+   "km": 16.1,
+   "lon": 28.883656,
+   "lat": 41.177005
+  },
+  "Alibeyköy": {
+   "district": "Eyüp",
+   "km": 18.4,
+   "lon": 28.949577,
+   "lat": 41.079141
+  },
+  "Kemerburgaz": {
+   "district": "Eyüp",
+   "km": 12.8,
+   "lon": 28.910238,
+   "lat": 41.159163
+  },
+  "Rami": {
+   "district": "Eyüp",
+   "km": 23.0,
+   "lon": 28.920755,
+   "lat": 41.048492
+  },
+  "Topçular": {
+   "district": "Eyüp",
+   "km": 21.1,
+   "lon": 28.925432,
+   "lat": 41.041104
+  },
+  "Güneşli": {
+   "district": "Bağcılar",
+   "km": 30.5,
+   "lon": 28.830518,
+   "lat": 41.033087
+  },
+  "Mahmutbey": {
+   "district": "Bağcılar",
+   "km": 28.2,
+   "lon": 28.830633,
+   "lat": 41.055112
+  },
+  "Kozyatağı": {
+   "district": "Kadıköy",
+   "km": 27.3,
+   "lon": 29.092423,
+   "lat": 40.968513
+  },
+  "Göztepe": {
+   "district": "Kadıköy",
+   "km": 25.9,
+   "lon": 29.062632,
+   "lat": 40.979205
+  },
+  "Moda": {
+   "district": "Kadıköy",
+   "km": 26.6,
+   "lon": 29.025471,
+   "lat": 40.981169
+  },
+  "Fikirtepe": {
+   "district": "Kadıköy",
+   "km": 23.2,
+   "lon": 29.051621,
+   "lat": 40.993218
+  },
+  "Bostancı": {
+   "district": "Kadıköy",
+   "km": 29.2,
+   "lon": 29.094902,
+   "lat": 40.953932
+  },
+  "Suadiye": {
+   "district": "Kadıköy",
+   "km": 28.7,
+   "lon": 29.084412,
+   "lat": 40.960477
+  },
+  "Erenköy": {
+   "district": "Kadıköy",
+   "km": 26.7,
+   "lon": 29.076376,
+   "lat": 40.971666
+  },
+  "Acıbadem": {
+   "district": "Kadıköy",
+   "km": 22.4,
+   "lon": 29.044401,
+   "lat": 41.002332
+  },
+  "Altunizade": {
+   "district": "Üsküdar",
+   "km": 18.4,
+   "lon": 29.048312,
+   "lat": 41.021911
+  },
+  "Kısıklı": {
+   "district": "Üsküdar",
+   "km": 20.3,
+   "lon": 29.062079,
+   "lat": 41.022185
+  },
+  "Bağlarbaşı": {
+   "district": "Üsküdar",
+   "km": 19.5,
+   "lon": 29.036875,
+   "lat": 41.021456
+  },
+  "Beylerbeyi": {
+   "district": "Üsküdar",
+   "km": 19.1,
+   "lon": 29.046546,
+   "lat": 41.041793
+  },
+  "Çengelköy": {
+   "district": "Üsküdar",
+   "km": 20.2,
+   "lon": 29.053802,
+   "lat": 41.050918
+  },
+  "Ünalan": {
+   "district": "Üsküdar",
+   "km": 22.1,
+   "lon": 29.060026,
+   "lat": 40.998094
+  },
+  "Kavacık": {
+   "district": "Beykoz",
+   "km": 19.1,
+   "lon": 29.086191,
+   "lat": 41.093005
+  },
+  "Anadoluhisarı": {
+   "district": "Beykoz",
+   "km": 20.0,
+   "lon": 29.067049,
+   "lat": 41.08209
+  },
+  "Dudullu": {
+   "district": "Ümraniye",
+   "km": 30.2,
+   "lon": 29.163188,
+   "lat": 41.01537
+  },
+  "Çakmak": {
+   "district": "Ümraniye",
+   "km": 27.8,
+   "lon": 29.118626,
+   "lat": 41.021597
+  },
+  "Şerifali": {
+   "district": "Ümraniye",
+   "km": 31.2,
+   "lon": 29.1458,
+   "lat": 41.000472
+  },
+  "Yukarı Dudullu": {
+   "district": "Ümraniye",
+   "km": 29.3,
+   "lon": 29.152573,
+   "lat": 41.011068
+  },
+  "Kurtköy": {
+   "district": "Pendik",
+   "km": 50.1,
+   "lon": 29.296728,
+   "lat": 40.909887
+  },
+  "Sabiha Gökçen": {
+   "district": "Pendik",
+   "km": 59.0,
+   "lon": 29.311806,
+   "lat": 40.894334
+  },
+  "Kaynarca": {
+   "district": "Pendik",
+   "km": 49.3,
+   "lon": 29.255961,
+   "lat": 40.871368
+  },
+  "Yenişehir": {
+   "district": "Pendik",
+   "km": 48.8,
+   "lon": 29.304338,
+   "lat": 40.931292
+  },
+  "İçerenköy": {
+   "district": "Ataşehir",
+   "km": 32.8,
+   "lon": 29.126207,
+   "lat": 40.97896
+  },
+  "Barbaros": {
+   "district": "Ataşehir",
+   "km": 26.1,
+   "lon": 29.1036,
+   "lat": 40.990252
+  },
+  "Taşdelen": {
+   "district": "Çekmeköy",
+   "km": 36.7,
+   "lon": 29.231131,
+   "lat": 41.031185
+  },
+  "Soğanlık": {
+   "district": "Kartal",
+   "km": 43.1,
+   "lon": 29.192427,
+   "lat": 40.913216
+  },
+  "Yakacık": {
+   "district": "Kartal",
+   "km": 44.1,
+   "lon": 29.224767,
+   "lat": 40.919097
+  },
+  "Cevizli": {
+   "district": "Maltepe",
+   "km": 34.8,
+   "lon": 29.14704,
+   "lat": 40.916285
+  },
+  "İdealtepe": {
+   "district": "Maltepe",
+   "km": 32.0,
+   "lon": 29.11423,
+   "lat": 40.937835
+  },
+  "Küçükyalı": {
+   "district": "Maltepe",
+   "km": 30.8,
+   "lon": 29.107167,
+   "lat": 40.946258
+  },
+  "Aydınlı": {
+   "district": "Tuzla",
+   "km": 55.2,
+   "lon": 29.328067,
+   "lat": 40.867227
+  },
+  "Orhanlı": {
+   "district": "Tuzla",
+   "km": 52.3,
+   "lon": 29.356909,
+   "lat": 40.894181
+  },
+  "İçmeler": {
+   "district": "Tuzla",
+   "km": 53.8,
+   "lon": 29.300038,
+   "lat": 40.845687
+  },
+  "Şekerpınar": {
+   "district": "Çayırova",
+   "km": 59.6,
+   "lon": 29.362152,
+   "lat": 40.850724
+  },
+  "Beylikdüzü OSB": {
+   "district": "Beylikdüzü",
+   "km": 46.9,
+   "lon": 28.661412,
+   "lat": 40.996962
+  },
+  "Yakuplu": {
+   "district": "Beylikdüzü",
+   "km": 46.5,
+   "lon": 28.669736,
+   "lat": 40.988419
+  },
+  "Kıraç": {
+   "district": "Esenyurt",
+   "km": 42.9,
+   "lon": 28.647499,
+   "lat": 41.038122
+  },
+  "Avcılar": {
+   "district": "Avcılar",
+   "km": 43.9,
+   "lon": 28.719805,
+   "lat": 40.978141
+  },
+  "Ambarlı": {
+   "district": "Avcılar",
+   "km": 44.7,
+   "lon": 28.714165,
+   "lat": 40.973732
+  },
+  "Firuzköy": {
+   "district": "Avcılar",
+   "km": 45.0,
+   "lon": 28.710488,
+   "lat": 41.009394
+  },
+  "Bayrampaşa": {
+   "district": "Bayrampaşa",
+   "km": 23.6,
+   "lon": 28.913827,
+   "lat": 41.033329
+  },
+  "Zeytinburnu": {
+   "district": "Zeytinburnu",
+   "km": 24.3,
+   "lon": 28.922908,
+   "lat": 41.016787
+  },
+  "Kazlıçeşme": {
+   "district": "Zeytinburnu",
+   "km": 26.5,
+   "lon": 28.91689,
+   "lat": 40.992673
+  },
+  "Davutpaşa": {
+   "district": "Esenler",
+   "km": 26.6,
+   "lon": 28.890691,
+   "lat": 41.031703
+  },
+  "Atışalanı": {
+   "district": "Esenler",
+   "km": 24.2,
+   "lon": 28.869402,
+   "lat": 41.056387
+  }
+ }
+}
